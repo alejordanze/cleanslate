@@ -4,7 +4,7 @@ import type { FfmpegCheckResult } from '../../shared/ffmpeg';
 
 declare global {
   interface Window {
-    cleanslate: {
+    cleanslate?: {
       inspectFfmpeg: () => Promise<FfmpegCheckResult>;
     };
   }

@@ -5,81 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Electron + TypeScript starter with a bundled FFmpeg binary."
+      content="React + Electron + TypeScript starter with a bundled FFmpeg binary."
     />
     <title>CleanSlate</title>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </head>
   <body>
     <div class="backdrop backdrop--a"></div>
     <div class="backdrop backdrop--b"></div>
 
-    <main id="app" class="shell">
-      <section class="hero">
-        <div class="eyebrow-row">
-          <span class="eyebrow">Electron</span>
-          <span class="eyebrow">TypeScript</span>
-          <span class="eyebrow eyebrow--accent">FFmpeg bundle</span>
-        </div>
-
-        <h1>Bundled media tooling, ready for desktop.</h1>
-
-        <p class="lede">
-          This starter resolves a static FFmpeg binary from the Electron main process, exposes it
-          through a preload bridge, and lets you verify the runtime from the renderer.
-        </p>
-
-        <div class="hero-grid">
-          <article class="hero-card">
-            <span class="hero-card__label">Architecture</span>
-            <strong>Main + preload + renderer</strong>
-            <span>All written in TypeScript and built with electron-vite.</span>
-          </article>
-
-          <article class="hero-card">
-            <span class="hero-card__label">Binary</span>
-            <strong>ffmpeg-static</strong>
-            <span>Downloaded per platform and unpacked for packaging.</span>
-          </article>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel__header">
-          <div>
-            <span class="panel__label">FFmpeg bundle</span>
-            <h2 id="statusTitle">Checking binary...</h2>
-          </div>
-
-          <span id="statusPill" class="pill pill--loading">Loading</span>
-        </div>
-
-        <div class="actions">
-          <button id="refreshButton" type="button">Re-run check</button>
-
-          <div class="runtime">
-            <span id="platformText"></span>
-            <span id="runtimeText"></span>
-          </div>
-        </div>
-
-        <dl class="stats">
-          <div>
-            <dt>Binary path</dt>
-            <dd id="pathValue">Waiting for runtime data.</dd>
-          </div>
-
-          <div>
-            <dt>Version line</dt>
-            <dd id="versionValue">Waiting for runtime data.</dd>
-          </div>
-        </dl>
-
-        <section class="console">
-          <header>Raw output</header>
-          <pre id="outputValue">Running ffmpeg -version...</pre>
-        </section>
-      </section>
-    </main>
+    <div id="root"></div>
   </body>
 </html>

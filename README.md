@@ -1,10 +1,10 @@
 # CleanSlate Desktop
 
-Electron + TypeScript starter with a bundled FFmpeg binary.
+React + Electron + TypeScript starter with a bundled FFmpeg binary.
 
 ## What is included
 
-- Electron main, preload, and renderer code in TypeScript
+- Electron main and preload code in TypeScript with a React renderer
 - `ffmpeg-static` wired into the main process
 - A preload bridge for safe renderer access
 - An Electron Builder packaging config that unpacks the FFmpeg binary
