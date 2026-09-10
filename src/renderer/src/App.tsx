@@ -1,122 +1,242 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type DragEvent } from 'react';
 
 import type { FfmpegCheckResult } from '../../shared/ffmpeg';
+import {
+  createMediaFile,
+  formatFileSize,
+  getFileStem,
+  type MediaFile
+} from '../../shared/media';
 
-type StatusState = 'loading' | 'ready' | 'error';
+type RuntimeStatus = 'loading' | 'ready' | 'error';
 
-export default function App() {
-  const [status, setStatus] = useState<StatusState>('loading');
-  const [result, setResult] = useState<FfmpegCheckResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+function getBridge() {
+  const bridge = window.cleanslate;
 
-  async function refresh() {
-    setStatus('loading');
-    setError(null);
+  if (!bridge) {
+    throw new Error('Electron preload bridge is unavailable. Restart the app with npm run dev.');
+  }
 
-    try {
-      const bridge = window.cleanslate;
-      if (!bridge) {
-        throw new Error('Electron preload bridge is unavailable. Restart the app with npm run dev.');
+  return bridge;
+}
+
+function App() {
+  const [files, setFiles] = useState<MediaFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isPicking, setIsPicking] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [ffmpegStatus, setFfmpegStatus] = useState<RuntimeStatus>('loading');
+  const [ffmpegResult, setFfmpegResult] = useState<FfmpegCheckResult | null>(null);
+
+  useEffect(() => {
+    async function checkFfmpeg() {
+      try {
+        const result = await getBridge().inspectFfmpeg();
+        setFfmpegResult(result);
+        setFfmpegStatus(result.available ? 'ready' : 'error');
+      } catch {
+        setFfmpegStatus('error');
+      }
+    }
+
+    void checkFfmpeg();
+  }, []);
+
+  function addFiles(incoming: MediaFile[]) {
+    if (incoming.length === 0) {
+      return;
+    }
+
+    setFiles((current) => {
+      const existingIds = new Set(current.map((file) => file.id));
+      const uniqueIncoming = incoming.filter((file) => !existingIds.has(file.id));
+
+      return uniqueIncoming.length > 0 ? [...current, ...uniqueIncoming] : current;
+    });
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+    setMessage(null);
+
+    const bridge = window.cleanslate;
+    const droppedFiles = Array.from(event.dataTransfer.files);
+
+    if (!bridge) {
+      setMessage('The Electron file bridge is unavailable. Restart the app and try again.');
+      return;
+    }
+
+    const mediaFiles = droppedFiles.flatMap((file) => {
+      let path = '';
+
+      try {
+        path = bridge.getPathForFile(file);
+      } catch {
+        // The file can still be listed if the runtime cannot expose its local path.
       }
 
-      const nextResult = await bridge.inspectFfmpeg();
-      setResult(nextResult);
-      setStatus(nextResult.available ? 'ready' : 'error');
+      const mediaFile = createMediaFile({
+        name: file.name,
+        mimeType: file.type,
+        path,
+        size: file.size,
+        source: 'drop'
+      });
+
+      return mediaFile ? [mediaFile] : [];
+    });
+
+    if (mediaFiles.length !== droppedFiles.length) {
+      setMessage('Only image and video files can be added. Unsupported files were skipped.');
+    }
+
+    addFiles(mediaFiles);
+  }
+
+  async function handlePickFiles() {
+    setIsPicking(true);
+    setMessage(null);
+
+    try {
+      addFiles(await getBridge().pickMediaFiles());
     } catch (cause) {
-      setResult(null);
-      setStatus('error');
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setMessage(cause instanceof Error ? cause.message : 'Could not open the media picker.');
+    } finally {
+      setIsPicking(false);
     }
   }
 
-  useEffect(() => {
-    void refresh();
-  }, []);
+  function removeFile(id: string) {
+    setFiles((current) => current.filter((file) => file.id !== id));
+  }
 
-  const title =
-    status === 'loading'
-      ? 'Checking bundled FFmpeg...'
-      : error
-        ? 'Failed to reach the main process'
-        : result?.available
-          ? 'Bundled FFmpeg is available'
-          : 'Bundled FFmpeg is not ready';
-  const pillLabel =
-    status === 'loading' ? 'Checking' : error ? 'Bridge error' : result?.available ? 'Available' : 'Unavailable';
+  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setIsDragging(false);
+    }
+  }
+
+  const runtimeLabel =
+    ffmpegStatus === 'loading'
+      ? 'Checking FFmpeg'
+      : ffmpegStatus === 'ready'
+        ? 'FFmpeg ready'
+        : 'FFmpeg unavailable';
 
   return (
-    <main className="shell">
-      <section className="hero">
-        <div className="eyebrow-row">
-          <span className="eyebrow">Electron</span>
-          <span className="eyebrow">React</span>
-          <span className="eyebrow eyebrow--accent">FFmpeg bundle</span>
+    <main className="app-shell">
+      <header className="app-header">
+        <div className="brand">
+          <span className="brand-mark">CS</span>
+          <span className="brand-name">CleanSlate</span>
+          <span className="brand-tag">media privacy</span>
         </div>
 
-        <h1>Bundled media tooling, ready for desktop.</h1>
+        <span className="runtime-pill" data-state={ffmpegStatus}>
+          <span className="runtime-dot" />
+          {runtimeLabel}
+        </span>
+      </header>
 
-        <p className="lede">
-          This starter resolves a static FFmpeg binary from the Electron main process, exposes it
-          through a preload bridge, and lets you verify the runtime from the React renderer.
+      <section className="intro">
+        <div>
+          <span className="section-kicker">01 / Add media</span>
+          <h1>Make your files<br /><em>quietly private.</em></h1>
+        </div>
+        <p>
+          Drop in images and videos to prepare them for a clean export. Your files stay on this
+          device while CleanSlate gets them ready for the next step.
         </p>
-
-        <div className="hero-grid">
-          <article className="hero-card">
-            <span className="hero-card__label">Architecture</span>
-            <strong>Main + preload + renderer</strong>
-            <span>Electron services stay isolated from the React UI.</span>
-          </article>
-
-          <article className="hero-card">
-            <span className="hero-card__label">Binary</span>
-            <strong>ffmpeg-static</strong>
-            <span>Downloaded per platform and unpacked for packaging.</span>
-          </article>
-        </div>
       </section>
 
-      <section className="panel">
-        <div className="panel__header">
-          <div>
-            <span className="panel__label">FFmpeg bundle</span>
-            <h2>{title}</h2>
-          </div>
+      <section
+        className={`drop-zone${isDragging ? ' is-dragging' : ''}`}
+        onDragEnter={() => setIsDragging(true)}
+        onDragOver={(event) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'copy';
+        }}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <div className="drop-orbit" aria-hidden="true">
+          <span className="drop-orbit__inner">+</span>
+        </div>
+        <div className="drop-copy">
+          <strong>{isDragging ? 'Release to add files' : 'Drop files here'}</strong>
+          <span>Images and videos, one or many at a time</span>
+        </div>
+        <span className="drop-divider">or</span>
+        <button className="button button--secondary" type="button" onClick={() => void handlePickFiles()} disabled={isPicking}>
+          {isPicking ? 'Opening...' : 'Choose from device'}
+        </button>
+      </section>
 
-          <span className="pill" data-state={status}>
-            {pillLabel}
+      {message && <p className="notice" role="status">{message}</p>}
+
+      <section className="file-section" aria-live="polite">
+        <div className="section-heading">
+          <div>
+            <span className="section-kicker">02 / Review</span>
+            <h2>{files.length === 0 ? 'Nothing added yet' : `${files.length} file${files.length === 1 ? '' : 's'} ready`}</h2>
+          </div>
+          {files.length > 0 && (
+            <button className="text-button" type="button" onClick={() => setFiles([])}>
+              Clear all
+            </button>
+          )}
+        </div>
+
+        {files.length === 0 ? (
+          <div className="empty-state">
+            <span className="empty-state__line" />
+            <span>Files you add will appear here</span>
+            <span className="empty-state__line" />
+          </div>
+        ) : (
+          <div className="file-list">
+            {files.map((file) => (
+              <article className="file-row" key={file.id}>
+                <span className={`file-kind file-kind--${file.kind}`} aria-hidden="true">
+                  {file.kind === 'image' ? 'IMG' : 'VID'}
+                </span>
+                <div className="file-details">
+                  <strong title={file.name}>{getFileStem(file.name)}</strong>
+                  <span>
+                    {file.extension ? `.${file.extension}` : 'Media file'}
+                    <span className="file-meta-separator">/</span>
+                    {formatFileSize(file.size)}
+                    <span className="file-meta-separator">/</span>
+                    {file.source === 'drop' ? 'Dropped' : 'Attached'}
+                  </span>
+                </div>
+                <button className="remove-button" type="button" onClick={() => removeFile(file.id)} aria-label={`Remove ${file.name}`}>
+                  Remove
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <footer className="process-bar">
+        <div>
+          <span className="process-label">Ready when you are</span>
+          <span className="process-note">
+            {files.length === 0 ? 'Add at least one image or video to begin.' : 'Metadata removal will be available in the next step.'}
           </span>
         </div>
+        <button className="button button--primary" type="button" disabled={files.length === 0}>
+          Remove metadata
+          <span className="button-arrow">-&gt;</span>
+        </button>
+      </footer>
 
-        <div className="actions">
-          <button type="button" onClick={() => void refresh()} disabled={status === 'loading'}>
-            Re-run check
-          </button>
-
-          <div className="runtime">
-            <span>{result ? `${result.platform} · ${result.arch}` : 'Waiting for runtime data.'}</span>
-            <span>
-              {result ? `Electron ${result.electronVersion} · Node ${result.nodeVersion}` : 'Electron runtime pending'}
-            </span>
-          </div>
-        </div>
-
-        <dl className="stats">
-          <div>
-            <dt>Binary path</dt>
-            <dd>{result?.path ?? (error ? 'Renderer bridge unavailable' : 'Waiting for runtime data.')}</dd>
-          </div>
-
-          <div>
-            <dt>Version line</dt>
-            <dd>{result?.versionLine ?? (error ? 'Unavailable' : 'Waiting for runtime data.')}</dd>
-          </div>
-        </dl>
-
-        <section className="console">
-          <header>Raw output</header>
-          <pre>{result?.output || error || (status === 'loading' ? 'Running ffmpeg -version...' : 'No output captured.')}</pre>
-        </section>
-      </section>
+      {ffmpegResult && <span className="sr-only">{ffmpegResult.versionLine}</span>}
     </main>
   );
 }
+
+export default App;

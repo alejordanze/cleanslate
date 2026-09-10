@@ -1,7 +1,13 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectBundledFfmpeg } from '../shared/ffmpeg';
+import {
+  createMediaFile,
+  supportedMediaExtensions,
+  type MediaFile
+} from '../shared/media';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -38,6 +44,41 @@ function createWindow() {
 }
 
 ipcMain.handle('ffmpeg:inspect', async () => inspectBundledFfmpeg());
+
+ipcMain.handle('media:pick', async (): Promise<MediaFile[]> => {
+  const options: Electron.OpenDialogOptions = {
+    title: 'Choose media to clean',
+    buttonLabel: 'Add media',
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      {
+        name: 'Images and videos',
+        extensions: supportedMediaExtensions
+      }
+    ]
+  };
+  const selection = mainWindow
+    ? await dialog.showOpenDialog(mainWindow, options)
+    : await dialog.showOpenDialog(options);
+
+  if (selection.canceled) {
+    return [];
+  }
+
+  const files = await Promise.all(
+    selection.filePaths.map(async (filePath) => {
+      const fileStats = await stat(filePath);
+      return createMediaFile({
+        name: filePath.split(/[\\/]/).pop() ?? filePath,
+        path: filePath,
+        size: fileStats.size,
+        source: 'picker'
+      });
+    })
+  );
+
+  return files.filter((file): file is MediaFile => file !== null);
+});
 
 app.whenReady().then(() => {
   createWindow();
