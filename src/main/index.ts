@@ -3,11 +3,13 @@ import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectBundledFfmpeg } from '../shared/ffmpeg';
+import { removeMetadata } from './metadata';
 import {
   createMediaFile,
   supportedMediaExtensions,
   type MediaFile
 } from '../shared/media';
+import type { MetadataProcessRequest } from '../shared/metadata';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -44,6 +46,18 @@ function createWindow() {
 }
 
 ipcMain.handle('ffmpeg:inspect', async () => inspectBundledFfmpeg());
+
+ipcMain.handle('metadata:remove', async (_event, request: MetadataProcessRequest) => {
+  if (request.mode !== 'replace' && request.mode !== 'new') {
+    throw new Error('Choose whether to replace the original or save a new cleaned file.');
+  }
+
+  if (!Array.isArray(request.files) || request.files.length === 0) {
+    throw new Error('Add at least one image or video before removing metadata.');
+  }
+
+  return removeMetadata(request, mainWindow);
+});
 
 ipcMain.handle('media:pick', async (): Promise<MediaFile[]> => {
   const options: Electron.OpenDialogOptions = {

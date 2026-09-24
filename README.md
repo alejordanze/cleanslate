@@ -23,9 +23,11 @@ Start with `npm install`, then use:
 
 ## Media queue
 
-The first media workflow accepts image and video files through drag-and-drop or the native system
-file picker. Files are listed locally in the renderer and are not modified yet. The `Remove
-metadata` action is intentionally a placeholder for the next FFmpeg and EXIF processing step.
+The media workflow accepts image and video files through drag-and-drop or the native system file
+picker. Choosing `Remove metadata` asks whether to replace the originals or create new cleaned
+copies beside them with `_cleaned` added to the filename. Video streams are copied without
+re-encoding while images are re-encoded with their native FFmpeg format so embedded EXIF data is
+not carried into the cleaned file.
 
 If Electron reports `Error: Electron uninstall` during `npm run dev`, its platform
 runtime was not downloaded. Confirm that `node_modules/electron/dist/` is missing,

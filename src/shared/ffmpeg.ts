@@ -13,14 +13,14 @@ export interface FfmpegCheckResult {
   arch: string;
 }
 
-interface RunResult {
+export interface FfmpegRunResult {
   code: number | null;
   signal: NodeJS.Signals | null;
   stdout: string;
   stderr: string;
 }
 
-function runBinary(file: string, args: string[]): Promise<RunResult> {
+function runBinary(file: string, args: string[]): Promise<FfmpegRunResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(file, args, {
       windowsHide: true
@@ -48,6 +48,14 @@ function runBinary(file: string, args: string[]): Promise<RunResult> {
       resolve({ code, signal, stdout, stderr });
     });
   });
+}
+
+export function runFfmpeg(args: string[]): Promise<FfmpegRunResult> {
+  if (!ffmpegPath) {
+    return Promise.reject(new Error('FFmpeg is not available for this platform.'));
+  }
+
+  return runBinary(ffmpegPath, args);
 }
 
 function firstMeaningfulLine(output: string): string | null {
