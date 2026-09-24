@@ -1,6 +1,7 @@
 import { useEffect, useState, type DragEvent } from 'react';
 
 import type { FfmpegCheckResult } from '../../shared/ffmpeg';
+import type { MetadataSaveMode } from '../../shared/metadata';
 import {
   createMediaFile,
   formatFileSize,
@@ -20,10 +21,23 @@ function getBridge() {
   return bridge;
 }
 
+function getMetadataBridge() {
+  const bridge = getBridge();
+
+  if (typeof bridge.removeMetadata !== 'function') {
+    throw new Error('The CleanSlate bridge is out of date. Fully quit and restart the app to load the latest version.');
+  }
+
+  return bridge;
+}
+
 function App() {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isPicking, setIsPicking] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [saveMode, setSaveMode] = useState<MetadataSaveMode>('new');
   const [message, setMessage] = useState<string | null>(null);
   const [ffmpegStatus, setFfmpegStatus] = useState<RuntimeStatus>('loading');
   const [ffmpegResult, setFfmpegResult] = useState<FfmpegCheckResult | null>(null);
@@ -108,6 +122,54 @@ function App() {
     }
   }
 
+  async function handleRemoveMetadata() {
+    if (files.length === 0 || isProcessing) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setMessage(null);
+
+    try {
+      const result = await getMetadataBridge().removeMetadata({
+        mode: saveMode,
+        files: files.map(({ id, name, path, kind }) => ({ id, name, path, kind }))
+      });
+
+      const resultById = new Map(result.results.map((fileResult) => [fileResult.id, fileResult]));
+
+      setFiles((current) => current.map((file) => {
+        const fileResult = resultById.get(file.id);
+
+        return fileResult?.ok && fileResult.size !== null && fileResult.outputPath === file.path
+          ? { ...file, size: fileResult.size }
+          : file;
+      }));
+
+      if (result.failed === 0) {
+        setMessage(
+          saveMode === 'new'
+            ? `Metadata removed from ${result.succeeded} file${result.succeeded === 1 ? '' : 's'}. Cleaned copies were saved beside the originals.`
+            : `Metadata removed from ${result.succeeded} file${result.succeeded === 1 ? '' : 's'}. The original files were updated.`
+        );
+      } else {
+        const errors = result.results
+          .filter((fileResult) => !fileResult.ok && fileResult.error)
+          .map((fileResult) => fileResult.error)
+          .slice(0, 2)
+          .join(' ');
+        setMessage(`${result.succeeded} cleaned, ${result.failed} failed. ${errors}`.trim());
+      }
+
+      setIsSaveDialogOpen(false);
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'Could not remove metadata.');
+      setIsSaveDialogOpen(false);
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
   function removeFile(id: string) {
     setFiles((current) => current.filter((file) => file.id !== id));
   }
@@ -140,41 +202,12 @@ function App() {
         </span>
       </header>
 
-      <section className="intro">
+      <section className="page-heading">
         <div>
           <span className="section-kicker">01 / Add media</span>
-          <h1>Make your files<br /><em>quietly private.</em></h1>
+          <h1>Make your files <em>quietly private.</em></h1>
         </div>
-        <p>
-          Drop in images and videos to prepare them for a clean export. Your files stay on this
-          device while CleanSlate gets them ready for the next step.
-        </p>
       </section>
-
-      <section
-        className={`drop-zone${isDragging ? ' is-dragging' : ''}`}
-        onDragEnter={() => setIsDragging(true)}
-        onDragOver={(event) => {
-          event.preventDefault();
-          event.dataTransfer.dropEffect = 'copy';
-        }}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <div className="drop-orbit" aria-hidden="true">
-          <span className="drop-orbit__inner">+</span>
-        </div>
-        <div className="drop-copy">
-          <strong>{isDragging ? 'Release to add files' : 'Drop files here'}</strong>
-          <span>Images and videos, one or many at a time</span>
-        </div>
-        <span className="drop-divider">or</span>
-        <button className="button button--secondary" type="button" onClick={() => void handlePickFiles()} disabled={isPicking}>
-          {isPicking ? 'Opening...' : 'Choose from device'}
-        </button>
-      </section>
-
-      {message && <p className="notice" role="status">{message}</p>}
 
       <section className="file-section" aria-live="polite">
         <div className="section-heading">
@@ -189,50 +222,135 @@ function App() {
           )}
         </div>
 
-        {files.length === 0 ? (
-          <div className="empty-state">
-            <span className="empty-state__line" />
-            <span>Files you add will appear here</span>
-            <span className="empty-state__line" />
-          </div>
-        ) : (
-          <div className="file-list">
-            {files.map((file) => (
-              <article className="file-row" key={file.id}>
-                <span className={`file-kind file-kind--${file.kind}`} aria-hidden="true">
-                  {file.kind === 'image' ? 'IMG' : 'VID'}
-                </span>
-                <div className="file-details">
-                  <strong title={file.name}>{getFileStem(file.name)}</strong>
-                  <span>
-                    {file.extension ? `.${file.extension}` : 'Media file'}
-                    <span className="file-meta-separator">/</span>
-                    {formatFileSize(file.size)}
-                    <span className="file-meta-separator">/</span>
-                    {file.source === 'drop' ? 'Dropped' : 'Attached'}
+        <div
+          className={`file-board${isDragging ? ' is-dragging' : ''}`}
+          onDragEnter={() => setIsDragging(true)}
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'copy';
+          }}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {files.length === 0 ? (
+            <div className="empty-state">
+              <div className="drop-orbit" aria-hidden="true">
+                <span className="drop-orbit__inner">+</span>
+              </div>
+              <strong>{isDragging ? 'Release to add files' : 'Drop files here'}</strong>
+              <span>Images and videos, one or many at a time</span>
+            </div>
+          ) : (
+            <div className="file-list">
+              <span className="file-list-hint">Drop more files anywhere in this queue</span>
+              {files.map((file) => (
+                <article className="file-row" key={file.id}>
+                  <span className={`file-kind file-kind--${file.kind}`} aria-hidden="true">
+                    {file.kind === 'image' ? 'IMG' : 'VID'}
                   </span>
-                </div>
-                <button className="remove-button" type="button" onClick={() => removeFile(file.id)} aria-label={`Remove ${file.name}`}>
-                  Remove
-                </button>
-              </article>
-            ))}
-          </div>
-        )}
+                  <div className="file-details">
+                    <strong title={file.name}>{getFileStem(file.name)}</strong>
+                    <span>
+                      {file.extension ? `.${file.extension}` : 'Media file'}
+                      <span className="file-meta-separator">/</span>
+                      {formatFileSize(file.size)}
+                      <span className="file-meta-separator">/</span>
+                      {file.source === 'drop' ? 'Dropped' : 'Attached'}
+                    </span>
+                  </div>
+                  <button className="remove-button" type="button" onClick={() => removeFile(file.id)} aria-label={`Remove ${file.name}`}>
+                    Remove
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <footer className="process-bar">
-        <div>
-          <span className="process-label">Ready when you are</span>
-          <span className="process-note">
-            {files.length === 0 ? 'Add at least one image or video to begin.' : 'Metadata removal will be available in the next step.'}
-          </span>
+        <div className="process-info">
+          <button className="button button--secondary" type="button" onClick={() => void handlePickFiles()} disabled={isPicking}>
+            <span className="attach-mark" aria-hidden="true">+</span>
+            {isPicking ? 'Opening...' : 'Attach files'}
+          </button>
+          {message ? (
+            <span className="process-note process-note--warning" role="status">{message}</span>
+          ) : (
+            <div className="process-copy">
+              <span className="process-label">Ready when you are</span>
+              <span className="process-note">
+                {files.length === 0 ? 'Add at least one image or video to begin.' : 'Metadata removal will be available in the next step.'}
+              </span>
+            </div>
+          )}
         </div>
-        <button className="button button--primary" type="button" disabled={files.length === 0}>
-          Remove metadata
+        <button
+          className="button button--primary"
+          type="button"
+          onClick={() => {
+            setMessage(null);
+            setIsSaveDialogOpen(true);
+          }}
+          disabled={files.length === 0 || isProcessing}
+        >
+          {isProcessing ? 'Cleaning...' : 'Remove metadata'}
           <span className="button-arrow">-&gt;</span>
         </button>
       </footer>
+
+      {isSaveDialogOpen && (
+        <div className="modal-backdrop">
+          <section className="save-dialog" role="dialog" aria-modal="true" aria-labelledby="save-dialog-title">
+            <span className="section-kicker">03 / Clean export</span>
+            <h2 id="save-dialog-title">Where should the cleaned files go?</h2>
+            <p className="save-dialog-copy">
+              Choose whether CleanSlate should update the originals or make new copies beside them.
+              Images are re-encoded to remove embedded EXIF; video streams are copied without re-encoding.
+            </p>
+
+            <div className="save-options">
+              <label className={`save-option${saveMode === 'new' ? ' is-selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="save-mode"
+                  value="new"
+                  checked={saveMode === 'new'}
+                  onChange={() => setSaveMode('new')}
+                />
+                <span>
+                  <strong>Save new cleaned copies</strong>
+                  <small>Adds <code>_cleaned</code> to each filename and saves it beside the original.</small>
+                </span>
+              </label>
+
+              <label className={`save-option${saveMode === 'replace' ? ' is-selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="save-mode"
+                  value="replace"
+                  checked={saveMode === 'replace'}
+                  onChange={() => setSaveMode('replace')}
+                />
+                <span>
+                  <strong>Replace the original files</strong>
+                  <small>Updates each attached file in place. This cannot be undone.</small>
+                </span>
+              </label>
+            </div>
+
+            <div className="save-dialog-actions">
+              <button className="text-button" type="button" onClick={() => setIsSaveDialogOpen(false)} disabled={isProcessing}>
+                Cancel
+              </button>
+              <button className="button button--primary" type="button" onClick={() => void handleRemoveMetadata()} disabled={isProcessing}>
+                {isProcessing ? 'Cleaning...' : 'Clean files'}
+                <span className="button-arrow">-&gt;</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {ffmpegResult && <span className="sr-only">{ffmpegResult.versionLine}</span>}
     </main>
