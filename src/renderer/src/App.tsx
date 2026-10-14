@@ -2,6 +2,7 @@ import { useEffect, useState, type DragEvent } from 'react';
 
 import type { FfmpegCheckResult } from '../../shared/ffmpeg';
 import type { MetadataSaveMode } from '../../shared/metadata';
+import folderOpenIcon from '../../../open-folder.svg';
 import {
   createMediaFile,
   formatFileSize,
@@ -235,7 +236,7 @@ function App() {
           {files.length === 0 ? (
             <div className="empty-state">
               <div className="drop-orbit" aria-hidden="true">
-                <span className="drop-orbit__inner">+</span>
+                <img className="drop-orbit__icon" src={folderOpenIcon} alt="" />
               </div>
               <strong>{isDragging ? 'Release to add files' : 'Drop files here'}</strong>
               <span>Images and videos, one or many at a time</span>
