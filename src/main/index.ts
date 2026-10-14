@@ -23,7 +23,7 @@ function createWindow() {
     height: 820,
     minWidth: 960,
     minHeight: 680,
-    backgroundColor: '#09111f',
+    backgroundColor: '#e2e6ee',
     title: 'CleanSlate',
     webPreferences: {
       contextIsolation: true,
