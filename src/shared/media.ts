@@ -150,6 +150,13 @@ export function createMediaFile(input: MediaFileInput): MediaFile | null {
   };
 }
 
+export function mergeMediaFiles(current: MediaFile[], incoming: MediaFile[]): MediaFile[] {
+  const existingIds = new Set(current.map((file) => file.id));
+  const uniqueIncoming = incoming.filter((file) => !existingIds.has(file.id));
+
+  return uniqueIncoming.length > 0 ? [...current, ...uniqueIncoming] : current;
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) {
     return '0 B';

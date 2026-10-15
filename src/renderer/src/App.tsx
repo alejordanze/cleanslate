@@ -7,6 +7,7 @@ import {
   createMediaFile,
   formatFileSize,
   getFileStem,
+  mergeMediaFiles,
   type MediaFile
 } from '../../shared/media';
 
@@ -62,12 +63,7 @@ function App() {
       return;
     }
 
-    setFiles((current) => {
-      const existingIds = new Set(current.map((file) => file.id));
-      const uniqueIncoming = incoming.filter((file) => !existingIds.has(file.id));
-
-      return uniqueIncoming.length > 0 ? [...current, ...uniqueIncoming] : current;
-    });
+    setFiles((current) => mergeMediaFiles(current, incoming));
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
