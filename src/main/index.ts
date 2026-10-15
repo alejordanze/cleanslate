@@ -17,13 +17,14 @@ const __dirname = dirname(__filename);
 const rendererUrl = process.env.ELECTRON_RENDERER_URL ?? process.env.VITE_DEV_SERVER_URL ?? '';
 let mainWindow: BrowserWindow | null = null;
 
-function createWindow() {
+function createWindow(show = true) {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 820,
     minWidth: 960,
     minHeight: 680,
     backgroundColor: '#e2e6ee',
+    show,
     title: 'CleanSlate',
     webPreferences: {
       contextIsolation: true,
@@ -95,6 +96,34 @@ ipcMain.handle('media:pick', async (): Promise<MediaFile[]> => {
 });
 
 app.whenReady().then(() => {
+  if (process.argv.includes('--smoke-test')) {
+    const window = createWindow(false);
+    const fail = (message: string) => {
+      console.error(`Smoke test failed: ${message}`);
+      app.exit(1);
+    };
+
+    window.webContents.once('did-fail-load', (_event, _code, description) => fail(description));
+    window.webContents.once('render-process-gone', (_event, details) => fail(details.reason));
+    window.webContents.once('did-finish-load', async () => {
+      try {
+        const rendered = await window.webContents.executeJavaScript('Boolean(document.querySelector(".app-shell"))');
+        const ffmpeg = await inspectBundledFfmpeg();
+
+        if (!rendered || !ffmpeg.available) {
+          fail(!rendered ? 'renderer did not mount' : ffmpeg.error ?? 'FFmpeg is unavailable');
+          return;
+        }
+
+        console.log('Smoke test passed: renderer mounted and bundled FFmpeg runs.');
+        app.exit(0);
+      } catch (error) {
+        fail(error instanceof Error ? error.message : String(error));
+      }
+    });
+    return;
+  }
+
   createWindow();
 
   app.on('activate', () => {

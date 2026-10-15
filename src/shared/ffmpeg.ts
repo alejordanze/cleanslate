@@ -1,6 +1,12 @@
 import { spawn } from 'node:child_process';
 import ffmpegPath from 'ffmpeg-static';
 
+export function resolveBundledFfmpegPath(path: string | null): string | null {
+  return path?.replace(/([/\\])app\.asar(?=[/\\])/, '$1app.asar.unpacked') ?? null;
+}
+
+const binaryPath = resolveBundledFfmpegPath(ffmpegPath);
+
 export interface FfmpegCheckResult {
   available: boolean;
   path: string | null;
@@ -51,11 +57,11 @@ function runBinary(file: string, args: string[]): Promise<FfmpegRunResult> {
 }
 
 export function runFfmpeg(args: string[]): Promise<FfmpegRunResult> {
-  if (!ffmpegPath) {
+  if (!binaryPath) {
     return Promise.reject(new Error('FFmpeg is not available for this platform.'));
   }
 
-  return runBinary(ffmpegPath, args);
+  return runBinary(binaryPath, args);
 }
 
 function firstMeaningfulLine(output: string): string | null {
@@ -81,7 +87,7 @@ function runtimeInfo() {
 export async function inspectBundledFfmpeg(): Promise<FfmpegCheckResult> {
   const runtime = runtimeInfo();
 
-  if (!ffmpegPath) {
+  if (!binaryPath) {
     return {
       ...runtime,
       available: false,
@@ -93,14 +99,14 @@ export async function inspectBundledFfmpeg(): Promise<FfmpegCheckResult> {
   }
 
   try {
-    const result = await runBinary(ffmpegPath, ['-version']);
+    const result = await runBinary(binaryPath, ['-version']);
     const output = [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join('\n');
     const versionLine = firstMeaningfulLine(output);
 
     return {
       ...runtime,
       available: result.code === 0,
-      path: ffmpegPath,
+      path: binaryPath,
       versionLine,
       output,
       error:
@@ -112,7 +118,7 @@ export async function inspectBundledFfmpeg(): Promise<FfmpegCheckResult> {
     return {
       ...runtime,
       available: false,
-      path: ffmpegPath,
+      path: binaryPath,
       versionLine: null,
       output: '',
       error: error instanceof Error ? error.message : 'Unknown FFmpeg error'

@@ -15,6 +15,7 @@
     "preview": "electron-vite preview",
     "dist": "npm run build && electron-builder",
     "dist:dir": "npm run build && electron-builder --dir",
+    "dist:mac": "npm run build && electron-builder --mac dmg --publish never",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -38,12 +39,8 @@
   "build": {
     "appId": "com.alejandrojordan.cleanslate",
     "productName": "CleanSlate",
-    "asar": {
-      "smartUnpack": true,
-      "unpack": [
-        "**/node_modules/ffmpeg-static/**/*"
-      ]
-    },
+    "asar": true,
+    "asarUnpack": ["node_modules/ffmpeg-static/**"],
     "directories": {
       "output": "release"
     },
@@ -53,7 +50,9 @@
       "package.json"
     ],
     "mac": {
-      "category": "public.app-category.video"
+      "category": "public.app-category.video",
+      "target": ["dmg"],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "win": {
       "target": "nsis"
