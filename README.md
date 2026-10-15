@@ -1,6 +1,6 @@
 # CleanSlate Desktop
 
-React + Electron + TypeScript starter with a bundled FFmpeg binary.
+React + Electron desktop app for removing metadata from images and videos with a bundled FFmpeg binary.
 
 ## What is included
 
@@ -19,6 +19,9 @@ Start with `npm install`, then use:
 - `npm run build` bundles the app into `out/`
 - `npm run preview` previews the production build
 - `npm run dist` builds and packages installers into `release/`
+- `npm run dist:mac -- --arm64` builds an Apple silicon DMG; use `--x64` for Intel
+- `scripts/smoke-dmg.sh release/CleanSlate-0.1.0-arm64.dmg` mounts the DMG, launches the packaged app in hidden smoke-test mode, and detaches it
+- `npm test` runs the media, FFmpeg-path, and metadata-processing unit tests
 - `npm run typecheck` runs a TypeScript-only check
 
 ## Media queue
@@ -36,3 +39,11 @@ then run `./node_modules/.bin/install-electron --no` with network access.
 ## FFmpeg note
 
 `ffmpeg-static` downloads a platform-specific binary during install. If you package for another platform, reinstall dependencies on that target platform before building.
+
+## macOS release
+
+The CI workflow runs typecheck, unit tests, and a renderer build on pushes to `main` and pull requests. The release workflow runs when an existing `v<package version>` tag is pushed, or when it is selected through **Run workflow**. It builds separate Apple silicon and Intel DMGs on matching macOS runners, mounts and launches each DMG, checks its bundled FFmpeg, and publishes both DMGs plus SHA-256 checksums to a GitHub release only after both builds pass.
+
+For version `0.1.0`, push the commits to `main`, then create and push tag `v0.1.0`. The tag must match `package.json`. The release workflow uses the repository's `GITHUB_TOKEN` with `contents: write`; no extra GitHub token is needed.
+
+These DMGs are intentionally unsigned and not notarized. macOS may block the first launch. If you trust the download, try opening the app, then choose **System Settings → Privacy & Security → Open Anyway**, as described by [Apple](https://support.apple.com/en-us/102445). Do not use an unsigned build when you need a normal first-launch experience for end users.
