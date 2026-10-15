@@ -15,6 +15,7 @@
     "preview": "electron-vite preview",
     "dist": "npm run build && electron-builder",
     "dist:dir": "npm run build && electron-builder --dir",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -31,7 +32,8 @@
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "typescript": "^7.0.2",
-    "vite": "^7.3.6"
+    "vite": "^7.3.6",
+    "vitest": "^4.0.0"
   },
   "build": {
     "appId": "com.alejandrojordan.cleanslate",
