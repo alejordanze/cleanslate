@@ -6,7 +6,7 @@
   "type": "module",
   "main": "./out/main/index.js",
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22"
   },
   "packageManager": "npm@10.9.7",
   "scripts": {
@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "exiftool-vendored": "^39.0.1",
     "ffmpeg-static": "^5.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
@@ -40,18 +41,27 @@
     "appId": "com.alejandrojordan.cleanslate",
     "productName": "CleanSlate",
     "asar": true,
-    "asarUnpack": ["node_modules/ffmpeg-static/**"],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**",
+      "node_modules/exiftool-vendored.pl/**",
+      "node_modules/exiftool-vendored.exe/**"
+    ],
     "directories": {
       "output": "release"
     },
     "files": [
       "out/**/*",
       "node_modules/ffmpeg-static/**/*",
+      "node_modules/exiftool-vendored/**/*",
+      "node_modules/exiftool-vendored.pl/**/*",
+      "node_modules/exiftool-vendored.exe/**/*",
       "package.json"
     ],
     "mac": {
       "category": "public.app-category.video",
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "win": {

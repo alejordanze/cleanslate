@@ -21,13 +21,11 @@ export interface MediaFileInput {
 }
 
 export const supportedImageExtensions = [
-  '3fr',
   'arw',
   'avif',
   'bmp',
   'cr2',
   'cr3',
-  'dcr',
   'dds',
   'dng',
   'exr',

@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectBundledFfmpeg } from '../shared/ffmpeg';
 import { removeMetadata } from './metadata';
+import { inspectBundledExiftool } from '../shared/exiftool';
 import {
   createMediaFile,
   supportedMediaExtensions,
@@ -109,13 +110,14 @@ app.whenReady().then(() => {
       try {
         const rendered = await window.webContents.executeJavaScript('Boolean(document.querySelector(".app-shell"))');
         const ffmpeg = await inspectBundledFfmpeg();
+        await inspectBundledExiftool();
 
         if (!rendered || !ffmpeg.available) {
           fail(!rendered ? 'renderer did not mount' : ffmpeg.error ?? 'FFmpeg is unavailable');
           return;
         }
 
-        console.log('Smoke test passed: renderer mounted and bundled FFmpeg runs.');
+        console.log('Smoke test passed: renderer mounted and bundled FFmpeg and ExifTool run.');
         app.exit(0);
       } catch (error) {
         fail(error instanceof Error ? error.message : String(error));

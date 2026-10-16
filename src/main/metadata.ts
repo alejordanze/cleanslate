@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { chmod, rename, stat, unlink } from 'node:fs/promises';
+import { chmod, copyFile, rename, stat, unlink } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 
 import { dialog, type BrowserWindow } from 'electron';
 
 import { runFfmpeg } from '../shared/ffmpeg';
+import { runExiftool } from '../shared/exiftool';
 import type {
   MetadataProcessRequest,
   MetadataProcessResponse,
@@ -82,6 +83,10 @@ function ffmpegArgs(target: MetadataProcessTarget, outputPath: string): string[]
   ];
 }
 
+const exiftoolImageExtensions = new Set([
+  'arw', 'cr2', 'cr3', 'dng', 'heic', 'heif', 'nef', 'orf', 'raf', 'raw', 'rw2', 'sr2'
+]);
+
 async function replaceFile(sourcePath: string, destinationPath: string): Promise<void> {
   try {
     await rename(sourcePath, destinationPath);
@@ -149,11 +154,16 @@ async function processOne(
     }
 
     tempPath = temporaryPath(outputPath);
-    const ffmpegResult = await runFfmpeg(ffmpegArgs(target, tempPath));
+    if (target.kind === 'image' && exiftoolImageExtensions.has(extname(target.path).slice(1).toLowerCase())) {
+      await copyFile(target.path, tempPath);
+      await runExiftool(tempPath);
+    } else {
+      const ffmpegResult = await runFfmpeg(ffmpegArgs(target, tempPath));
 
-    if (ffmpegResult.code !== 0) {
-      const detail = lastMeaningfulLine(ffmpegResult.stderr) ?? lastMeaningfulLine(ffmpegResult.stdout);
-      throw new Error(detail ?? `FFmpeg exited with code ${ffmpegResult.code ?? 'unknown'}.`);
+      if (ffmpegResult.code !== 0) {
+        const detail = lastMeaningfulLine(ffmpegResult.stderr) ?? lastMeaningfulLine(ffmpegResult.stdout);
+        throw new Error(detail ?? `FFmpeg exited with code ${ffmpegResult.code ?? 'unknown'}.`);
+      }
     }
 
     await chmod(tempPath, inputStats.mode & 0o777);

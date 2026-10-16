@@ -6,12 +6,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { dialog } from 'electron';
 import { runFfmpeg } from '../src/shared/ffmpeg';
+import { runExiftool } from '../src/shared/exiftool';
 import { removeMetadata } from '../src/main/metadata';
+import { supportedImageExtensions, supportedVideoExtensions } from '../src/shared/media';
+import { createMediaFile } from '../src/shared/media';
 
 vi.mock('electron', () => ({ dialog: { showMessageBox: vi.fn() } }));
 vi.mock('../src/shared/ffmpeg', () => ({ runFfmpeg: vi.fn() }));
+vi.mock('../src/shared/exiftool', () => ({ runExiftool: vi.fn() }));
 
 const ffmpeg = vi.mocked(runFfmpeg);
+const exiftool = vi.mocked(runExiftool);
 const showMessageBox = vi.mocked(dialog.showMessageBox);
 let testDirectory: string;
 
@@ -32,6 +37,30 @@ function successfulFfmpeg() {
 }
 
 describe('metadata removal', () => {
+  it.each([
+    ...supportedImageExtensions.map((extension) => [extension, 'image'] as const),
+    ...supportedVideoExtensions.map((extension) => [extension, 'video'] as const)
+  ])('loads a dummy .%s file and saves a cleaned copy', async (extension, kind) => {
+    const input = join(testDirectory, `sample.${extension}`);
+    await writeFile(input, 'dummy original');
+    const file = createMediaFile({ name: `sample.${extension}`, path: input, size: 14, source: 'picker' });
+    expect(file?.kind).toBe(kind);
+    successfulFfmpeg();
+    exiftool.mockImplementation(async (path) => { await writeFile(path, 'dummy cleaned'); });
+
+    const result = await removeMetadata({ mode: 'new', files: [
+      { id: file!.id, name: file!.name, path: file!.path, kind: file!.kind }
+    ] }, null);
+
+    expect(result).toMatchObject({ succeeded: 1, failed: 0 });
+    expect(result.results[0].outputPath).toBe(join(testDirectory, `sample_cleaned.${extension}`));
+    expect(await readFile(input, 'utf8')).toBe('dummy original');
+    expect(await readFile(result.results[0].outputPath!, 'utf8')).toBe(
+      exiftool.mock.calls.length ? 'dummy cleaned' : 'cleaned data'
+    );
+    expect(ffmpeg.mock.calls.length + exiftool.mock.calls.length).toBe(1);
+  });
+
   it('creates an image copy and strips metadata without changing the original', async () => {
     const input = join(testDirectory, 'photo.jpg');
     await writeFile(input, 'original data');
@@ -104,6 +133,21 @@ describe('metadata removal', () => {
     expect(result.results[0].error).toBe('conversion failed');
     expect(await readFile(input, 'utf8')).toBe('original data');
     expect(await readdir(testDirectory)).toEqual(['photo.jpg']);
+  });
+
+  it('preserves a HEIC original and removes the temporary copy when ExifTool fails', async () => {
+    const input = join(testDirectory, 'photo.heic');
+    await writeFile(input, 'original data');
+    exiftool.mockRejectedValue(new Error('Invalid HEIC data'));
+
+    const result = await removeMetadata({ mode: 'replace', files: [
+      { id: 'photo', name: 'photo.heic', path: input, kind: 'image' }
+    ] }, null);
+
+    expect(result.results[0]).toMatchObject({ ok: false, error: 'Invalid HEIC data' });
+    expect(await readFile(input, 'utf8')).toBe('original data');
+    expect(await readdir(testDirectory)).toEqual(['photo.heic']);
+    expect(ffmpeg).not.toHaveBeenCalled();
   });
 
   it('reports a missing file while continuing with the rest of the batch', async () => {
