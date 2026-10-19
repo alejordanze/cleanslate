@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1044 458" role="img" aria-labelledby="title desc">
+  <title id="title">Three CleanSlate logo concepts</title>
+  <desc id="desc">Clear Folder, Remove Layer, and Folder Bin, each shown with the wordmark and at a small icon size.</desc>
+  <rect width="1044" height="458" fill="#e2e6ee"/>
+  <g transform="translate(32 32)">
+    <rect width="308" height="394" rx="18" fill="#fff" stroke="#dfe4eb"/>
+    <g transform="translate(90 28)">
+  <path d="M17 42V39c0-5.5 4.5-10 10-10h25l10 11h39c5.5 0 10 4.5 10 10v47c0 6-5 11-11 11H28c-6 0-11-5-11-11V42Z" fill="#fff" stroke="#18233c" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M17 51h94" fill="none" stroke="#18233c" stroke-width="6"/>
+  <rect x="34" y="61" width="56" height="34" rx="5" fill="#eaf2ff"/>
+  <circle cx="48" cy="71" r="4" fill="#0866ed"/>
+  <path d="m39 88 14-13 10 9 10-11 12 15" fill="none" stroke="#0866ed" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m96 61 2.3 8 7.7 2.2-7.7 2.2-2.3 8-2.3-8-7.7-2.2 7.7-2.2L96 61Z" fill="#0866ed"/>
+</g>
+    <text x="154" y="170" text-anchor="middle" fill="#18233c" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="29" font-weight="600" letter-spacing="-1">CleanSlate</text>
+    <path d="M30 236h248" stroke="#e8ebf0"/>
+    <text x="30" y="277" fill="#18233c" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="18" font-weight="600">Clear Folder</text>
+    <text x="30" y="306" fill="#818896" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="13">Folder + image + clean sparkle</text>
+    <rect x="30" y="335" width="29" height="29" rx="7" fill="#f5f9ff" stroke="#e8ebf0"/>
+    <g transform="translate(31 336) scale(.21)">
+  <path d="M17 42V39c0-5.5 4.5-10 10-10h25l10 11h39c5.5 0 10 4.5 10 10v47c0 6-5 11-11 11H28c-6 0-11-5-11-11V42Z" fill="#fff" stroke="#18233c" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M17 51h94" fill="none" stroke="#18233c" stroke-width="6"/>
+  <rect x="34" y="61" width="56" height="34" rx="5" fill="#eaf2ff"/>
+  <circle cx="48" cy="71" r="4" fill="#0866ed"/>
+  <path d="m39 88 14-13 10 9 10-11 12 15" fill="none" stroke="#0866ed" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m96 61 2.3 8 7.7 2.2-7.7 2.2-2.3 8-2.3-8-7.7-2.2 7.7-2.2L96 61Z" fill="#0866ed"/>
+</g>
+    <text x="70" y="355" fill="#818896" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="12">small icon preview</text>
+  </g>
+<g transform="translate(372 32)">
+    <rect width="308" height="394" rx="18" fill="#fff" stroke="#dfe4eb"/>
+    <g transform="translate(90 28)">
+  <path d="M17 46c0-6 5-11 11-11h21l9 10h42c6 0 11 5 11 11v41c0 6-5 11-11 11H28c-6 0-11-5-11-11V46Z" fill="#18233c"/>
+  <path d="M20 54h88" stroke="#fff" stroke-opacity=".45" stroke-width="3" stroke-linecap="round"/>
+  <rect x="32" y="61" width="49" height="33" rx="5" fill="#fff"/>
+  <circle cx="45" cy="70" r="3.5" fill="#0866ed"/>
+  <path d="m37 87 11-10 9 7 9-9 10 12" fill="none" stroke="#0866ed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="73" y="65" width="32" height="32" rx="7" fill="#0866ed" stroke="#fff" stroke-width="4"/>
+  <path d="m83 75 12 12m0-12L83 87" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+</g>
+    <text x="154" y="204" text-anchor="middle" fill="#18233c" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="29" font-weight="600" letter-spacing="-1">CleanSlate</text>
+    <path d="M30 236h248" stroke="#e8ebf0"/>
+    <text x="30" y="277" fill="#18233c" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="18" font-weight="600">Remove Layer</text>
+    <text x="30" y="306" fill="#818896" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="13">Folder + image + metadata X</text>
+    <rect x="30" y="335" width="29" height="29" rx="7" fill="#f5f9ff" stroke="#e8ebf0"/>
+    <g transform="translate(31 336) scale(.21)">
+  <path d="M17 46c0-6 5-11 11-11h21l9 10h42c6 0 11 5 11 11v41c0 6-5 11-11 11H28c-6 0-11-5-11-11V46Z" fill="#18233c"/>
+  <path d="M20 54h88" stroke="#fff" stroke-opacity=".45" stroke-width="3" stroke-linecap="round"/>
+  <rect x="32" y="61" width="49" height="33" rx="5" fill="#fff"/>
+  <circle cx="45" cy="70" r="3.5" fill="#0866ed"/>
+  <path d="m37 87 11-10 9 7 9-9 10 12" fill="none" stroke="#0866ed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="73" y="65" width="32" height="32" rx="7" fill="#0866ed" stroke="#fff" stroke-width="4"/>
+  <path d="m83 75 12 12m0-12L83 87" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+</g>
+    <text x="70" y="355" fill="#818896" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="12">small icon preview</text>
+  </g>
+<g transform="translate(712 32)">
+    <rect width="308" height="394" rx="18" fill="#fff" stroke="#dfe4eb"/>
+    <g transform="translate(90 28)">
+  <path d="M17 42V39c0-5.5 4.5-10 10-10h25l10 11h39c5.5 0 10 4.5 10 10v47c0 6-5 11-11 11H28c-6 0-11-5-11-11V42Z" fill="#fff" stroke="#18233c" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M17 51h94" stroke="#18233c" stroke-width="6"/>
+  <path d="M48 73h32l-3 22c-.3 2.5-2.4 4.5-5 4.5H56c-2.6 0-4.7-2-5-4.5l-3-22Z" fill="#0866ed"/>
+  <path d="M44 71h40M58 66h12" fill="none" stroke="#0866ed" stroke-width="5" stroke-linecap="round"/>
+  <path d="M59 80v11m10-11v11" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  <path d="M93 69v8m-4-4h8" fill="none" stroke="#0866ed" stroke-width="3.5" stroke-linecap="round"/>
+</g>
+    <text x="154" y="204" text-anchor="middle" fill="#18233c" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="29" font-weight="600" letter-spacing="-1">CleanSlate</text>
+    <path d="M30 236h248" stroke="#e8ebf0"/>
+    <text x="30" y="277" fill="#18233c" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="18" font-weight="600">Folder Bin</text>
+    <text x="30" y="306" fill="#818896" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="13">Folder + small metadata bin</text>
+    <rect x="30" y="335" width="29" height="29" rx="7" fill="#f5f9ff" stroke="#e8ebf0"/>
+    <g transform="translate(31 336) scale(.21)">
+  <path d="M17 42V39c0-5.5 4.5-10 10-10h25l10 11h39c5.5 0 10 4.5 10 10v47c0 6-5 11-11 11H28c-6 0-11-5-11-11V42Z" fill="#fff" stroke="#18233c" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M17 51h94" stroke="#18233c" stroke-width="6"/>
+  <path d="M48 73h32l-3 22c-.3 2.5-2.4 4.5-5 4.5H56c-2.6 0-4.7-2-5-4.5l-3-22Z" fill="#0866ed"/>
+  <path d="M44 71h40M58 66h12" fill="none" stroke="#0866ed" stroke-width="5" stroke-linecap="round"/>
+  <path d="M59 80v11m10-11v11" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  <path d="M93 69v8m-4-4h8" fill="none" stroke="#0866ed" stroke-width="3.5" stroke-linecap="round"/>
+</g>
+    <text x="70" y="355" fill="#818896" font-family="Inter, Avenir Next, Avenir, Segoe UI, sans-serif" font-size="12">small icon preview</text>
+  </g>
+</svg>

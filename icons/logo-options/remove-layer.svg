@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">CleanSlate remove layer mark</title>
+  <desc id="desc">A photo in a folder with a separate metadata layer marked for removal.</desc>
+  <path d="M17 46c0-6 5-11 11-11h21l9 10h42c6 0 11 5 11 11v41c0 6-5 11-11 11H28c-6 0-11-5-11-11V46Z" fill="#18233c"/>
+  <path d="M20 54h88" stroke="#fff" stroke-opacity=".45" stroke-width="3" stroke-linecap="round"/>
+  <rect x="32" y="61" width="49" height="33" rx="5" fill="#fff"/>
+  <circle cx="45" cy="70" r="3.5" fill="#0866ed"/>
+  <path d="m37 87 11-10 9 7 9-9 10 12" fill="none" stroke="#0866ed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="73" y="65" width="32" height="32" rx="7" fill="#0866ed" stroke="#fff" stroke-width="4"/>
+  <path d="m83 75 12 12m0-12L83 87" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+</svg>

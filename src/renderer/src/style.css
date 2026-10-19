@@ -39,17 +39,11 @@ button:focus-visible, .save-option:focus-within { outline: 3px solid rgba(8, 102
 .app-header { flex: 0 0 auto; justify-content: space-between; gap: 20px; padding-bottom: 27px; }
 .brand { gap: 11px; }
 .brand-mark {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid #cbdcf8;
-  border-radius: 5px;
-  color: var(--blue);
-  background: #fff;
-  font-size: .67rem;
-  font-weight: 900;
-  letter-spacing: .08em;
+  display: block;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  object-fit: contain;
 }
 .brand-name { font-size: 1.02rem; font-weight: 800; letter-spacing: -.03em; }
 .brand-tag, .runtime-pill, .section-kicker, .process-label {

@@ -3,6 +3,7 @@ import { useEffect, useState, type DragEvent } from 'react';
 import type { FfmpegCheckResult } from '../../shared/ffmpeg';
 import type { MetadataSaveMode } from '../../shared/metadata';
 import folderOpenIcon from '../../../open-folder.svg';
+import cleanSlateMark from '../../../icons/logo-options/clear-folder.svg';
 import {
   createMediaFile,
   formatFileSize,
@@ -188,7 +189,7 @@ function App() {
     <main className="app-shell">
       <header className="app-header">
         <div className="brand">
-          <span className="brand-mark">CS</span>
+          <img className="brand-mark" src={cleanSlateMark} alt="" />
           <span className="brand-name">CleanSlate</span>
           <span className="brand-tag">media privacy</span>
         </div>
