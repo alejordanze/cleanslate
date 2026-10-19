@@ -37,4 +37,13 @@ if [[ ! -x "$app_binary" ]]; then
   exit 1
 fi
 
+project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source_icon="$project_dir/icons/cleanslate.icns"
+for embedded_icon in "$mount_dir/CleanSlate.app/Contents/Resources/icon.icns" "$mount_dir/.VolumeIcon.icns"; do
+  if [[ ! -f "$embedded_icon" ]] || ! cmp -s "$source_icon" "$embedded_icon"; then
+    echo "The DMG does not contain the CleanSlate icon at $embedded_icon." >&2
+    exit 1
+  fi
+done
+
 "$app_binary" --smoke-test

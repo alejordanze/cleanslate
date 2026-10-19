@@ -20,11 +20,14 @@ Start with `npm install`, then use:
 - `npm run preview` previews the production build
 - `npm run dist` builds and packages installers into `release/`
 - `npm run dist:mac -- --arm64` builds an Apple silicon DMG; use `--x64` for Intel
+- `npm run icon:mac` regenerates the transparent macOS app/DMG icon from the SVG mark
 - `scripts/smoke-dmg.sh release/CleanSlate-0.1.0-arm64.dmg` mounts the DMG, launches the packaged app in hidden smoke-test mode, and detaches it
 - `npm test` runs format intake and processing unit tests plus real PNG, JPEG, HEIC, DNG, TIFF, MP4, and MOV metadata-removal checks
 - `npm run typecheck` runs a TypeScript-only check
 
 ## Media queue
+
+The app header and macOS app/DMG icons use the icon-only Clear Folder mark in `icons/logo-options/clear-folder.svg` and `icons/cleanslate.icns`. The SVG with the CleanSlate wordmark is kept as a separate brand asset. The macOS icon is rendered with a transparent canvas; run `npm run icon:mac` after changing the SVG.
 
 The media workflow accepts image and video files through drag-and-drop or the native system file
 picker. Choosing `Remove metadata` asks whether to replace the originals or create new cleaned

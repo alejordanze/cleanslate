@@ -16,6 +16,7 @@
     "dist": "npm run build && electron-builder",
     "dist:dir": "npm run build && electron-builder --dir",
     "dist:mac": "npm run build && electron-builder --mac dmg --publish never",
+    "icon:mac": "electron scripts/build-mac-icon.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -59,10 +60,14 @@
     ],
     "mac": {
       "category": "public.app-category.video",
+      "icon": "icons/cleanslate.icns",
       "target": [
         "dmg"
       ],
       "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "icon": "icons/cleanslate.icns"
     },
     "win": {
       "target": "nsis"
