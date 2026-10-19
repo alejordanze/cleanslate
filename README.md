@@ -17,6 +17,16 @@ shasum -a 256 -c SHA256SUMS-x64.txt
 
 Use the command for your Mac's architecture. A matching checksum confirms the DMG matches the file listed on that release page; it does not replace code signing or notarization.
 
+New releases built while this repository is public also have a GitHub build provenance attestation for each DMG. With the [GitHub CLI](https://cli.github.com/) installed, verify the downloaded file against the release workflow (replace the filename with the DMG you downloaded):
+
+```sh
+gh attestation verify CleanSlate-0.1.0-arm64.dmg \
+  --repo alejordanze/cleanslate \
+  --signer-workflow alejordanze/cleanslate/.github/workflows/release.yml
+```
+
+This checks that the exact DMG was produced by this repository's GitHub Actions release workflow. It does not mean Apple signed or notarized the app. The workflow skips attestations for private test releases; GitHub Free only supports them for public repositories.
+
 ## Use CleanSlate
 
 1. Drag images or videos into the window, or choose **Attach files**.
@@ -49,4 +59,4 @@ Use Node.js 22 or newer. Install dependencies with `npm ci`, then:
 
 `ffmpeg-static` downloads a platform-specific binary during dependency installation; ExifTool is also bundled. Install dependencies on the platform you are packaging for. The macOS icon is generated from `icons/logo-options/clear-folder.svg` with `npm run icon:mac`.
 
-The [CI workflow](.github/workflows/ci.yml) runs on pushes to `main` and pull requests. To publish a macOS release, update the package version and [release notes](.github/release-notes.md), push the changes, then push a matching tag such as `v0.1.0`. The [release workflow](.github/workflows/release.yml) builds and publishes the unsigned DMGs; a tag push is a public release action.
+The [CI workflow](.github/workflows/ci.yml) runs on pushes to `main` and pull requests. To publish a macOS release, update the package version and [release notes](.github/release-notes.md), push the changes, then push a matching tag such as `v0.1.0`. The [release workflow](.github/workflows/release.yml) builds the unsigned DMGs, attests and verifies them when the repository is public, and publishes them only after both architectures pass; a tag push is a release action.
