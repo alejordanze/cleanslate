@@ -1,55 +1,52 @@
-# CleanSlate Desktop
+# CleanSlate
 
-React + Electron desktop app for removing metadata from images and videos with a bundled FFmpeg binary.
+CleanSlate removes embedded metadata from images and videos on your Mac. Add files, choose whether to keep the originals, and clean them locally before sharing. No account or upload is required.
 
-## What is included
+## Download for macOS
 
-- Electron main and preload code in TypeScript with a React renderer
-- `ffmpeg-static` wired into the main process
-- A preload bridge for safe renderer access
-- An Electron Builder packaging config that unpacks the FFmpeg binary
-- Drag-and-drop and system-picker support for common image and video files
-- A deduplicated media queue with file type, extension, size, and source details
+Download CleanSlate from the [GitHub Releases page](https://github.com/alejordanze/cleanslate/releases). Choose the `arm64` DMG for an Apple silicon Mac (M series) or the `x64` DMG for an Intel Mac. Open the DMG and drag CleanSlate into Applications.
 
-## Scripts
+The app is **unsigned and not notarized**. We have not joined the [Apple Developer Program, which costs US$99 per year](https://developer.apple.com/programs/), or set up the Developer ID signing and [notarization](https://developer.apple.com/developer-id/) process. We are keeping this independent project free of that recurring cost and setup for now. This means macOS cannot verify the developer identity or confirm that Apple has checked the download. If macOS blocks CleanSlate, try opening it once, then go to **System Settings → Privacy & Security → Open Anyway** and follow [Apple's instructions](https://support.apple.com/en-us/102445). Only do this for a download you trust; there is no need to disable Gatekeeper for the whole Mac.
 
-Start with `npm install`, then use:
+Each release includes a SHA-256 checksum file for each DMG. Download the DMG and its matching `SHA256SUMS-arm64.txt` or `SHA256SUMS-x64.txt` into the same folder, then run one of these commands there:
 
-- `npm run dev` starts the Electron app in development mode
-- `npm run build` bundles the app into `out/`
-- `npm run preview` previews the production build
-- `npm run dist` builds and packages installers into `release/`
-- `npm run dist:mac -- --arm64` builds an Apple silicon DMG; use `--x64` for Intel
-- `npm run icon:mac` regenerates the transparent macOS app/DMG icon from the SVG mark
-- `scripts/smoke-dmg.sh release/CleanSlate-0.1.0-arm64.dmg` mounts the DMG, launches the packaged app in hidden smoke-test mode, and detaches it
-- `npm test` runs format intake and processing unit tests plus real PNG, JPEG, HEIC, DNG, TIFF, MP4, and MOV metadata-removal checks
-- `npm run typecheck` runs a TypeScript-only check
+```sh
+shasum -a 256 -c SHA256SUMS-arm64.txt
+shasum -a 256 -c SHA256SUMS-x64.txt
+```
 
-## Media queue
+Use the command for your Mac's architecture. A matching checksum confirms the DMG matches the file listed on that release page; it does not replace code signing or notarization.
 
-The app header and macOS app/DMG icons use the icon-only Clear Folder mark in `icons/logo-options/clear-folder.svg` and `icons/cleanslate.icns`. The SVG with the CleanSlate wordmark is kept as a separate brand asset. The macOS icon is rendered with a transparent canvas; run `npm run icon:mac` after changing the SVG.
+## Use CleanSlate
 
-The media workflow accepts image and video files through drag-and-drop or the native system file
-picker. Choosing `Remove metadata` asks whether to replace the originals or create new cleaned
-copies beside them with `_cleaned` added to the filename. Video streams are copied without
-re-encoding. HEIC, HEIF, and writable camera RAW formats are copied and cleaned with the bundled
-ExifTool so their image data stays intact. Other images are re-encoded with FFmpeg. RAW formats
-retain metadata required to decode the image; optional tags such as artist and comments are removed.
+1. Drag images or videos into the window, or choose **Attach files**.
+2. Select **Remove metadata** and choose **Save new cleaned copies** or **Replace the original files**.
+3. Cleaned copies are saved beside the originals with `_cleaned` in the filename. Existing cleaned copies are replaced only after you confirm. Replacing originals cannot be undone, so try a copy first when a file is important.
 
-If Electron reports `Error: Electron uninstall` during `npm run dev`, its platform
-runtime was not downloaded. Confirm that `node_modules/electron/dist/` is missing,
-then run `./node_modules/.bin/install-electron --no` with network access.
+Most images are re-encoded with bundled FFmpeg; this can change file size, quality, or color handling. HEIC, HEIF, and writable camera RAW files are copied and cleaned with bundled ExifTool instead. Video streams are copied without re-encoding while container and stream metadata are removed where FFmpeg supports it. The app reports files it could not clean.
 
-## FFmpeg note
+Real-file tests cover PNG, JPEG, HEIC, DNG, TIFF, MP4, and MOV. The picker accepts additional image and video extensions, but their cleaning results have not all been verified. Some RAW and TIFF metadata is required for the image to remain readable and may remain after cleaning. CleanSlate does not clear filenames, Finder tags, macOS extended attributes, sidecar files, or information visible or audible in the media itself. It is not a secure deletion tool. Check sensitive output before sharing it.
 
-`ffmpeg-static` downloads a platform-specific binary during install. ExifTool is also bundled for
-HEIC, HEIF, and writable RAW files. If you package for another platform, reinstall dependencies on
-that target platform before building.
+## Privacy and verification
 
-## macOS release
+CleanSlate's processing flow uses local files and the bundled FFmpeg and ExifTool binaries, and works without an internet connection. The app has no account, cloud processing, analytics, telemetry, or automatic update mechanism in its source. It does not include an upload request for your media. If you save files in a folder synced by iCloud, Dropbox, or another service, that service may sync them independently of CleanSlate.
 
-The CI workflow runs typecheck, unit tests, and a renderer build on pushes to `main` and pull requests. The release workflow runs when an existing `v<package version>` tag is pushed, or when it is selected through **Run workflow**. It builds separate Apple silicon and Intel DMGs on matching macOS runners, mounts and launches each DMG, checks its bundled FFmpeg and ExifTool, and publishes both DMGs plus SHA-256 checksums to a GitHub release only after both builds pass.
+You can review the [source code](https://github.com/alejordanze/cleanslate), including the [file-processing code](src/main/metadata.ts) and [release workflow](.github/workflows/release.yml). Releases are built from a version tag in GitHub Actions. The workflow runs typechecks and tests, mounts and launches each macOS DMG, then publishes both architectures with checksums only after both builds pass. These checks make failures easier to catch; they are not an independent security audit. [Report a problem](https://github.com/alejordanze/cleanslate/issues) if a file retains sensitive metadata or behaves unexpectedly.
 
-For version `0.1.0`, push the commits to `main`, then create and push tag `v0.1.0`. The tag must match `package.json`. The release workflow uses the repository's `GITHUB_TOKEN` with `contents: write`; no extra GitHub token is needed.
+## Build and test locally
 
-These DMGs are intentionally unsigned and not notarized. macOS may block the first launch. If you trust the download, try opening the app, then choose **System Settings → Privacy & Security → Open Anyway**, as described by [Apple](https://support.apple.com/en-us/102445). Do not use an unsigned build when you need a normal first-launch experience for end users.
+Use Node.js 22 or newer. Install dependencies with `npm ci`, then:
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the desktop app for development |
+| `npm run typecheck` | Check TypeScript types |
+| `npm test` | Run unit and real-media metadata tests |
+| `npm run build` | Build the app into `out/` |
+| `npm run dist:mac -- --arm64` | Build an Apple silicon DMG in `release/` |
+| `npm run dist:mac -- --x64` | Build an Intel DMG in `release/` |
+| `scripts/smoke-dmg.sh release/CleanSlate-0.1.0-arm64.dmg` | Mount and smoke-test a locally built DMG |
+
+`ffmpeg-static` downloads a platform-specific binary during dependency installation; ExifTool is also bundled. Install dependencies on the platform you are packaging for. The macOS icon is generated from `icons/logo-options/clear-folder.svg` with `npm run icon:mac`.
+
+The [CI workflow](.github/workflows/ci.yml) runs on pushes to `main` and pull requests. To publish a macOS release, update the package version and [release notes](.github/release-notes.md), push the changes, then push a matching tag such as `v0.1.0`. The [release workflow](.github/workflows/release.yml) builds and publishes the unsigned DMGs; a tag push is a public release action.

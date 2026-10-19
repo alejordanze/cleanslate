@@ -1,8 +1,8 @@
 {
-  "name": "cleanslate-desktop",
+  "name": "cleanslate",
   "version": "0.1.0",
   "private": true,
-  "description": "React + Electron + TypeScript starter with a bundled FFmpeg binary.",
+  "description": "A private desktop app that removes metadata from images and videos locally.",
   "type": "module",
   "main": "./out/main/index.js",
   "engines": {

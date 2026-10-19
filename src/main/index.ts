@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,8 +15,16 @@ import type { MetadataProcessRequest } from '../shared/metadata';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const rendererUrl = process.env.ELECTRON_RENDERER_URL ?? process.env.VITE_DEV_SERVER_URL ?? '';
+const rendererUrl = app.isPackaged
+  ? ''
+  : process.env.ELECTRON_RENDERER_URL ?? process.env.VITE_DEV_SERVER_URL ?? '';
 let mainWindow: BrowserWindow | null = null;
+
+function assertAppSender(event: IpcMainInvokeEvent): void {
+  if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) {
+    throw new Error('This request must come from the CleanSlate window.');
+  }
+}
 
 function createWindow(show = true) {
   mainWindow = new BrowserWindow({
@@ -30,9 +38,14 @@ function createWindow(show = true) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
       preload: join(__dirname, '../preload/index.cjs')
     }
   });
+
+  mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mainWindow.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
 
   if (rendererUrl) {
     void mainWindow.loadURL(rendererUrl);
@@ -47,9 +60,13 @@ function createWindow(show = true) {
   return mainWindow;
 }
 
-ipcMain.handle('ffmpeg:inspect', async () => inspectBundledFfmpeg());
+ipcMain.handle('ffmpeg:inspect', async (event) => {
+  assertAppSender(event);
+  return inspectBundledFfmpeg();
+});
 
-ipcMain.handle('metadata:remove', async (_event, request: MetadataProcessRequest) => {
+ipcMain.handle('metadata:remove', async (event, request: MetadataProcessRequest) => {
+  assertAppSender(event);
   if (request.mode !== 'replace' && request.mode !== 'new') {
     throw new Error('Choose whether to replace the original or save a new cleaned file.');
   }
@@ -61,7 +78,8 @@ ipcMain.handle('metadata:remove', async (_event, request: MetadataProcessRequest
   return removeMetadata(request, mainWindow);
 });
 
-ipcMain.handle('media:pick', async (): Promise<MediaFile[]> => {
+ipcMain.handle('media:pick', async (event): Promise<MediaFile[]> => {
+  assertAppSender(event);
   const options: Electron.OpenDialogOptions = {
     title: 'Choose media to clean',
     buttonLabel: 'Add media',
@@ -109,15 +127,27 @@ app.whenReady().then(() => {
     window.webContents.once('did-finish-load', async () => {
       try {
         const rendered = await window.webContents.executeJavaScript('Boolean(document.querySelector(".app-shell"))');
+        const bridgeReady = await window.webContents.executeJavaScript(
+          '(async () => { const bridge = window.cleanslate; return bridge ? (await bridge.inspectFfmpeg()).available : false; })()'
+        );
+        const cspPresent = await window.webContents.executeJavaScript(
+          'Boolean(document.querySelector("meta[http-equiv=Content-Security-Policy]"))'
+        );
         const ffmpeg = await inspectBundledFfmpeg();
         await inspectBundledExiftool();
 
-        if (!rendered || !ffmpeg.available) {
-          fail(!rendered ? 'renderer did not mount' : ffmpeg.error ?? 'FFmpeg is unavailable');
+        if (!rendered || !bridgeReady || !cspPresent || !ffmpeg.available) {
+          fail(!rendered
+            ? 'renderer did not mount'
+            : !bridgeReady
+              ? 'sandboxed preload bridge could not inspect FFmpeg'
+              : !cspPresent
+                ? 'production content security policy is missing'
+                : ffmpeg.error ?? 'FFmpeg is unavailable');
           return;
         }
 
-        console.log('Smoke test passed: renderer mounted and bundled FFmpeg and ExifTool run.');
+        console.log('Smoke test passed: renderer, preload bridge, content policy, FFmpeg, and ExifTool are ready.');
         app.exit(0);
       } catch (error) {
         fail(error instanceof Error ? error.message : String(error));

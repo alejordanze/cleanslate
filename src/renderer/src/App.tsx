@@ -304,7 +304,8 @@ function App() {
             <h2 id="save-dialog-title">Where should the cleaned files go?</h2>
             <p className="save-dialog-copy">
               Choose whether CleanSlate should update the originals or make new copies beside them.
-              Images are re-encoded to remove embedded EXIF; video streams are copied without re-encoding.
+              Most images are re-encoded; HEIC and camera RAW files are cleaned with ExifTool.
+              Video streams are copied without re-encoding.
             </p>
 
             <div className="save-options">
