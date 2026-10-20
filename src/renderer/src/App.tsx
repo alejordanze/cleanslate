@@ -2,8 +2,8 @@ import { useEffect, useState, type DragEvent } from 'react';
 
 import type { FfmpegCheckResult } from '../../shared/ffmpeg';
 import type { MetadataSaveMode } from '../../shared/metadata';
-import folderOpenIcon from '../../../open-folder.svg';
-import cleanSlateMark from '../../../icons/logo-options/clear-folder.svg';
+import folderOpenIcon from '../../../icons/open-folder.svg';
+import cleanSlateMark from '../../../icons/clear-folder.svg';
 import {
   createMediaFile,
   formatFileSize,

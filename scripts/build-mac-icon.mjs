@@ -9,9 +9,8 @@ import { app, BrowserWindow } from 'electron';
 
 const execFile = promisify(execFileCallback);
 const projectDirectory = join(dirname(fileURLToPath(import.meta.url)), '..');
-const sourcePath = join(projectDirectory, 'icons/logo-options/clear-folder.svg');
+const sourcePath = join(projectDirectory, 'icons/clear-folder.svg');
 const outputPath = join(projectDirectory, 'icons/cleanslate.icns');
-const pngPath = join(projectDirectory, 'icons/cleanslate.png');
 const sizes = [
   [16, 'icon_16x16.png'],
   [32, 'icon_16x16@2x.png'],
@@ -75,7 +74,6 @@ async function buildIcon() {
 
     const temporaryIcon = join(temporaryDirectory, 'cleanslate.icns');
     await execFile('iconutil', ['-c', 'icns', iconset, '-o', temporaryIcon]);
-    await copyFile(masterPng, pngPath);
     await copyFile(temporaryIcon, outputPath);
     console.log(`Built transparent CleanSlate icon: ${outputPath}`);
   } finally {

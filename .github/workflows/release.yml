@@ -1,8 +1,6 @@
 name: Release macOS DMGs
 
 on:
-  push:
-    tags: ['v*.*.*']
   workflow_dispatch:
 
 permissions:
@@ -16,15 +14,34 @@ concurrency:
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    environment: release
     permissions:
-      contents: write
+      contents: read
     outputs:
       tag: ${{ steps.release.outputs.tag }}
     env:
       GH_TOKEN: ${{ github.token }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
+      - name: Check release access
+        env:
+          RELEASE_TAG_PAT: ${{ secrets.RELEASE_TAG_PAT }}
+        run: |
+          if [[ "$GITHUB_ACTOR" != "$GITHUB_REPOSITORY_OWNER" || "$GITHUB_TRIGGERING_ACTOR" != "$GITHUB_REPOSITORY_OWNER" ]]; then
+            echo "::error::Only the repository owner can start a release."
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
+            echo "::error::Run this workflow from $DEFAULT_BRANCH."
+            exit 1
+          fi
+          if [[ -z "$RELEASE_TAG_PAT" ]]; then
+            echo "::error::Add RELEASE_TAG_PAT as a secret in the release environment."
+            exit 1
+          fi
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TAG_PAT }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -35,38 +52,28 @@ jobs:
           version=$(node -p 'require("./package.json").version')
           tag="v$version"
 
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            if [[ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
-              echo "::error::Run this workflow from $DEFAULT_BRANCH."
-              exit 1
-            fi
-
-            if gh release view "$tag" >/dev/null 2>&1; then
-              echo "::error::Release $tag already exists. Bump package.json for the next release."
-              exit 1
-            fi
-
-            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
-              git fetch --no-tags origin "refs/tags/$tag"
-              tagged_commit=$(git rev-list -n 1 FETCH_HEAD)
-              if [[ "$tagged_commit" != "$GITHUB_SHA" ]]; then
-                echo "::error::Tag $tag points to $tagged_commit, not this commit $GITHUB_SHA."
-                exit 1
-              fi
-              echo "Reusing $tag after an earlier failed release run."
-            else
-              status=$?
-              if [[ "$status" -ne 2 ]]; then
-                exit "$status"
-              fi
-              git -c user.name='github-actions[bot]' \
-                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-                tag -a "$tag" -m "CleanSlate $tag"
-              git push origin "refs/tags/$tag"
-            fi
-          elif [[ "$GITHUB_REF_NAME" != "$tag" ]]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package version $version."
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::error::Release $tag already exists. Bump package.json for the next release."
             exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+            git fetch --no-tags origin "refs/tags/$tag"
+            tagged_commit=$(git rev-list -n 1 FETCH_HEAD)
+            if [[ "$tagged_commit" != "$GITHUB_SHA" ]]; then
+              echo "::error::Tag $tag points to $tagged_commit, not this commit $GITHUB_SHA."
+              exit 1
+            fi
+            echo "Reusing $tag after an earlier failed release run."
+          else
+            status=$?
+            if [[ "$status" -ne 2 ]]; then
+              exit "$status"
+            fi
+            git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              tag -a "$tag" -m "CleanSlate $tag"
+            git push origin "refs/tags/$tag"
           fi
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"

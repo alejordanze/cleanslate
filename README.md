@@ -57,14 +57,19 @@ Use Node.js 22 or newer. Install dependencies with `npm ci`, then:
 | `npm run dist:mac -- --x64` | Build an Intel DMG in `release/` |
 | `scripts/smoke-dmg.sh release/CleanSlate-0.1.0-arm64.dmg` | Mount and smoke-test a locally built DMG |
 
-`ffmpeg-static` downloads a platform-specific binary during dependency installation; ExifTool is also bundled. Install dependencies on the platform you are packaging for. The macOS icon is generated from `icons/logo-options/clear-folder.svg` with `npm run icon:mac`.
+`ffmpeg-static` downloads a platform-specific binary during dependency installation; ExifTool is also bundled. Install dependencies on the platform you are packaging for. The macOS icon is generated from `icons/clear-folder.svg` with `npm run icon:mac`.
 
 ## Release a version
 
-The [CI workflow](.github/workflows/ci.yml) runs on pushes to `main` and pull requests. To publish a macOS release:
+The [CI workflow](.github/workflows/ci.yml) runs on pushes to `main` and pull requests. Before the first automated release, configure GitHub:
+
+1. Add **Repository admins** to the tag ruleset's bypass list with **Always allow**. The PAT acts as its admin owner when pushing the tag.
+2. Create a fine-grained PAT under the admin account, limited to this repository with **Contents: Read and write**. Add it as an environment secret named `RELEASE_TAG_PAT` in a GitHub Actions environment named `release`. Restrict that environment to the `main` branch. The release job uses this PAT only to fetch and create the protected tag; its other GitHub API calls use `GITHUB_TOKEN`.
+
+To publish a macOS release:
 
 1. Update the version in `package.json` and `package-lock.json`, for example with `npm version patch --no-git-tag-version`. The `--no-git-tag-version` option leaves tag creation to the workflow.
 2. Update the [release notes](.github/release-notes.md), then commit and push the changes to `main`. Wait for CI to pass.
 3. In GitHub Actions, open **Release macOS DMGs**, choose **Run workflow** on `main`, and run it.
 
-The [release workflow](.github/workflows/release.yml) reads the package version, creates its matching `v` tag, builds and checks both unsigned DMGs, and creates the GitHub Release after both builds pass. If a build fails after tagging, use **Re-run all jobs** on that workflow run to retry the same commit and tag. You can also start a release by pushing a matching tag yourself. No separate release branch or manual GitHub Release is needed.
+The [release workflow](.github/workflows/release.yml) reads the package version, creates its matching `v` tag, builds and checks both unsigned DMGs, and creates the GitHub Release after both builds pass. If a build fails after tagging, use **Re-run all jobs** on that workflow run to retry the same commit and tag. Only the repository owner can start or rerun this workflow. Releases start from the manual action because a PAT-created tag would otherwise trigger a second release run. No separate release branch or manual GitHub Release is needed.
