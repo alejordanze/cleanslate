@@ -55,9 +55,9 @@ Use Node.js 22 or newer. Install dependencies with `npm ci`, then:
 | `npm run build` | Build the app into `out/` |
 | `npm run dist:mac -- --arm64` | Build an Apple silicon DMG in `release/` |
 | `npm run dist:mac -- --x64` | Build an Intel DMG in `release/` |
-| `scripts/smoke-dmg.sh release/CleanSlate-0.1.0-arm64.dmg` | Mount and smoke-test a locally built DMG |
+| `scripts/smoke-dmg.sh release/CleanSlate-0.1.1-arm64.dmg` | Mount and smoke-test a locally built DMG |
 
-`ffmpeg-static` downloads a platform-specific binary during dependency installation; ExifTool is also bundled. Install dependencies on the platform you are packaging for. The macOS icon is generated from `icons/clear-folder.svg` with `npm run icon:mac`.
+`ffmpeg-static` downloads a platform-specific binary during dependency installation; ExifTool is also bundled. Install dependencies on the platform you are packaging for. The macOS app and development Dock icons are generated from `icons/clear-folder.svg` with `npm run icon:mac`.
 
 ## Release a version
 

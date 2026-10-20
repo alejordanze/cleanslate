@@ -4,6 +4,7 @@ import type { MetadataProcessResult, MetadataSaveMode } from '../../shared/metad
 import folderOpenIcon from '../../../icons/open-folder.svg';
 import cleanSlateMark from '../../../icons/clear-folder.svg';
 import gearIcon from '../../../icons/gear-svgrepo-com.svg';
+import removeAllIcon from '../../../icons/remove-all.svg';
 import rightArrowIcon from '../../../icons/right-arrow.svg';
 import { clearLegacyOutputMode, readLegacyOutputMode } from './preferences';
 import { FileRow } from './FileRow';
@@ -335,21 +336,17 @@ function App() {
 
       {view === 'files' ? <>
       <section className="page-heading">
-        <div>
-          <span className="section-kicker">01 / Add media</span>
-          <h1>Make your files <em>quietly private.</em></h1>
-        </div>
+        <h1>Make your files <em>quietly private.</em></h1>
+        <p>Remove hidden metadata from photos and videos before you share them.</p>
       </section>
 
       <section className="file-section" aria-live="polite">
         <div className="section-heading">
-          <div>
-            <span className="section-kicker">02 / Review</span>
-            <h2>{files.length === 0 ? 'Nothing added yet' : `${files.length} file${files.length === 1 ? '' : 's'} ready`}</h2>
-          </div>
+          <h2>{files.length === 0 ? 'Your files' : `${files.length} file${files.length === 1 ? '' : 's'} ready`}</h2>
           {files.length > 0 && (
-            <button className="text-button" type="button" onClick={() => { setFiles([]); setFileResults(new Map()); }}>
-              Clear all
+            <button className="remove-all-button" type="button" onClick={() => { setFiles([]); setFileResults(new Map()); }} aria-label="Remove all files from queue">
+              <img src={removeAllIcon} alt="" />
+              <span>Remove all</span>
             </button>
           )}
         </div>
@@ -409,7 +406,7 @@ function App() {
                     ? 'Cleaned copies will be saved beside the originals. Change this in Settings.'
                     : savedMode === 'replace'
                       ? 'Original files will be replaced. Change this in Settings.'
-                      : 'Choose where to save the cleaned files in the next step.'}
+                      : 'You’ll choose where to save the cleaned files before cleaning.'}
               </span>
             </div>
           )}
@@ -472,7 +469,6 @@ function App() {
       {isSaveDialogOpen && (
         <div className="modal-backdrop">
           <section className="save-dialog" role="dialog" aria-modal="true" aria-labelledby="save-dialog-title">
-            <span className="section-kicker">03 / Clean export</span>
             <h2 id="save-dialog-title">Where should the cleaned files go?</h2>
             <p className="save-dialog-copy">
               Choose whether CleanSlate should update the originals or make new copies beside them.

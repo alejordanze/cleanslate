@@ -161,6 +161,10 @@ ipcMain.handle('media:pick', async (event): Promise<MediaFile[]> => {
 });
 
 app.whenReady().then(() => {
+  if (process.platform === 'darwin' && !app.isPackaged) {
+    app.dock?.setIcon(join(__dirname, '../../icons/cleanslate.png'));
+  }
+
   if (process.argv.includes('--smoke-test')) {
     const checkControls = process.argv.includes('--smoke-controls');
     const window = createWindow(checkControls);
@@ -190,6 +194,15 @@ app.whenReady().then(() => {
           const dragRegion = bar && getComputedStyle(bar).getPropertyValue('-webkit-app-region');
           return Boolean(controls && dragRegion === 'drag' && gear.naturalWidth > 0 && !document.querySelector('.runtime-pill'));
         })()`);
+        const simplifiedScreenReady = await window.webContents.executeJavaScript(`(() => {
+          const heading = document.querySelector('.page-heading');
+          const brandMark = document.querySelector('.brand-mark');
+          return Boolean(heading?.querySelector('h1') && heading.querySelector('p') &&
+            !heading.querySelector('.section-kicker') &&
+            !document.querySelector('.file-section .section-kicker') &&
+            brandMark && getComputedStyle(brandMark).backgroundColor === 'rgb(220, 234, 255)');
+        })()`);
+        if (!simplifiedScreenReady) return fail('the simplified file screen or rounded brand icon did not render');
         const settingsReady = await window.webContents.executeJavaScript(`(async () => {
           const settingsButton = document.querySelector('button[aria-label="Open settings"]');
           settingsButton?.click();
@@ -298,6 +311,34 @@ app.whenReady().then(() => {
         })()`);
         if (!savedChoiceSkipsDialog) return fail('saved output choice did not skip the chooser after reload');
 
+        const removeAllIconReady = await window.webContents.executeJavaScript(`(async () => {
+          const button = document.querySelector('.remove-all-button');
+          const icon = button?.querySelector('img');
+          if (!(button instanceof HTMLButtonElement) || !(icon instanceof HTMLImageElement)) return false;
+          await icon.decode();
+          return button.getAttribute('aria-label') === 'Remove all files from queue' &&
+            icon.naturalWidth > 0 && button.textContent?.includes('Remove all');
+        })()`);
+        if (!removeAllIconReady) return fail('the remove-all icon did not render');
+
+        if (checkControls) {
+          const removeAllBounds = await window.webContents.executeJavaScript(`(() => {
+            const bounds = document.querySelector('.remove-all-button')?.getBoundingClientRect();
+            return bounds ? { x: bounds.x, y: bounds.y, height: bounds.height } : null;
+          })()`);
+          if (!removeAllBounds) return fail('the remove-all control is missing');
+          window.webContents.sendInputEvent({ type: 'mouseMove', x: Math.round(removeAllBounds.x + 18), y: Math.round(removeAllBounds.y + removeAllBounds.height / 2) });
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          const removeAllRevealed = await window.webContents.executeJavaScript(`(() => {
+            const button = document.querySelector('.remove-all-button');
+            const label = button?.querySelector('span');
+            return Boolean(button?.matches(':hover') && label &&
+              parseFloat(getComputedStyle(button).width) >= 118 &&
+              parseFloat(getComputedStyle(label).opacity) >= .95);
+          })()`);
+          if (!removeAllRevealed) return fail('the remove-all label did not appear on hover');
+        }
+
         await window.webContents.executeJavaScript('window.cleanslate.saveOutputPreference(null)');
         await new Promise<void>((resolve) => {
           window.webContents.once('did-finish-load', () => resolve());
@@ -358,7 +399,7 @@ app.whenReady().then(() => {
           if (!(await waitUntil(() => closed))) return fail('close control did not work');
         }
 
-        console.log('Smoke test passed: renderer, custom title bar, settings, warning layout, arrow icon, saved and remembered output choices, preload bridge, content policy, FFmpeg, and ExifTool are ready.');
+        console.log('Smoke test passed: simplified screen, rounded icon, remove-all control, custom title bar, settings, warning layout, arrow icon, saved and remembered output choices, preload bridge, content policy, FFmpeg, and ExifTool are ready.');
         app.exit(0);
       } catch (error) {
         fail(error instanceof Error ? error.message : String(error));

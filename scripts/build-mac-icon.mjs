@@ -11,6 +11,7 @@ const execFile = promisify(execFileCallback);
 const projectDirectory = join(dirname(fileURLToPath(import.meta.url)), '..');
 const sourcePath = join(projectDirectory, 'icons/clear-folder.svg');
 const outputPath = join(projectDirectory, 'icons/cleanslate.icns');
+const pngOutputPath = join(projectDirectory, 'icons/cleanslate.png');
 const sizes = [
   [16, 'icon_16x16.png'],
   [32, 'icon_16x16@2x.png'],
@@ -80,7 +81,8 @@ async function buildIcon() {
     const temporaryIcon = join(temporaryDirectory, 'cleanslate.icns');
     await execFile('iconutil', ['-c', 'icns', iconset, '-o', temporaryIcon]);
     await copyFile(temporaryIcon, outputPath);
-    console.log(`Built CleanSlate icon with a light blue background: ${outputPath}`);
+    await copyFile(masterPng, pngOutputPath);
+    console.log(`Built CleanSlate icons with a light blue background: ${outputPath} and ${pngOutputPath}`);
   } finally {
     browserWindow?.destroy();
     if (temporaryDirectory) await rm(temporaryDirectory, { recursive: true, force: true });

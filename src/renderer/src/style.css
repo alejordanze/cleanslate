@@ -59,6 +59,9 @@ button:focus-visible, .save-option:focus-within { outline: 3px solid rgba(8, 102
   height: 42px;
   flex: 0 0 42px;
   object-fit: contain;
+  padding: 2px;
+  border-radius: 10px;
+  background: #dceaff;
 }
 .brand-name { font-size: 1.02rem; font-weight: 800; letter-spacing: -.03em; }
 .brand-tag, .section-kicker, .process-label {
@@ -71,6 +74,7 @@ button:focus-visible, .save-option:focus-within { outline: 3px solid rgba(8, 102
 .brand-tag { padding-left: 11px; border-left: 1px solid #c8cfda; }
 .page-heading { flex: 0 0 auto; margin-bottom: 18px; }
 .page-heading .section-kicker { color: var(--faint); font-size: .64rem; }
+.page-heading p { margin: 9px 0 0; color: var(--muted); font-size: .85rem; line-height: 1.5; }
 .section-kicker { display: block; margin-bottom: 10px; color: var(--blue); }
 h1, h2, p { margin-top: 0; }
 h1 {
@@ -89,6 +93,11 @@ h1 em { color: var(--blue); font-style: normal; }
 h2 { margin-bottom: 0; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 700; letter-spacing: -.045em; }
 .text-button { padding: 0; color: var(--blue); background: transparent; font-size: .72rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
 .text-button:hover { text-decoration: underline; }
+.remove-all-button { display: inline-flex; width: 38px; height: 38px; flex: 0 0 auto; align-items: center; gap: 8px; overflow: hidden; padding: 0 9px; border-radius: var(--radius-md); color: var(--danger); background: transparent; white-space: nowrap; cursor: pointer; transition: width 220ms ease, background 180ms ease; }
+.remove-all-button img { display: block; width: 20px; height: 20px; flex: 0 0 20px; }
+.remove-all-button span { flex: 0 0 auto; opacity: 0; font-size: .72rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; transform: translateX(-5px); transition: opacity 180ms ease, transform 220ms ease; }
+.remove-all-button:hover, .remove-all-button:focus-visible { width: 120px; background: #fff2f2; }
+.remove-all-button:hover span, .remove-all-button:focus-visible span { opacity: 1; transform: translateX(0); }
 
 .file-board {
   position: relative;
@@ -159,7 +168,6 @@ h2 { margin-bottom: 0; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 700; 
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 24px; background: rgba(30, 42, 65, .42); backdrop-filter: blur(3px); }
 .save-dialog { width: min(100%, 560px); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 28px; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); background: var(--surface-strong); box-shadow: 0 22px 55px rgba(30, 42, 65, .20); }
-.save-dialog .section-kicker { margin-bottom: 10px; }
 .save-dialog h2 { font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1.05; }
 .save-dialog-copy { max-width: 46ch; margin: 15px 0 22px; color: var(--muted); font-size: .88rem; line-height: 1.55; }
 .save-options { display: grid; gap: 10px; }
@@ -174,6 +182,15 @@ h2 { margin-bottom: 0; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 700; 
 .remember-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
 .save-dialog-actions { display: flex; align-items: center; justify-content: flex-end; gap: 20px; margin-top: 24px; }
 @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (hover: none) {
+  .remove-all-button { width: 120px; }
+  .remove-all-button span { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .remove-all-button, .remove-all-button span { transition: none; }
+}
 
 @media (max-width: 760px) {
   .app-shell { width: min(100% - 28px, 620px); padding-top: 14px; }
