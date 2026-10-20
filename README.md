@@ -59,4 +59,12 @@ Use Node.js 22 or newer. Install dependencies with `npm ci`, then:
 
 `ffmpeg-static` downloads a platform-specific binary during dependency installation; ExifTool is also bundled. Install dependencies on the platform you are packaging for. The macOS icon is generated from `icons/logo-options/clear-folder.svg` with `npm run icon:mac`.
 
-The [CI workflow](.github/workflows/ci.yml) runs on pushes to `main` and pull requests. To publish a macOS release, update the package version and [release notes](.github/release-notes.md), push the changes, then push a matching tag such as `v0.1.0`. The [release workflow](.github/workflows/release.yml) builds the unsigned DMGs, attests and verifies them when the repository is public, and publishes them only after both architectures pass; a tag push is a release action.
+## Release a version
+
+The [CI workflow](.github/workflows/ci.yml) runs on pushes to `main` and pull requests. To publish a macOS release:
+
+1. Update the version in `package.json` and `package-lock.json`, for example with `npm version patch --no-git-tag-version`. The `--no-git-tag-version` option leaves tag creation to the workflow.
+2. Update the [release notes](.github/release-notes.md), then commit and push the changes to `main`. Wait for CI to pass.
+3. In GitHub Actions, open **Release macOS DMGs**, choose **Run workflow** on `main`, and run it.
+
+The [release workflow](.github/workflows/release.yml) reads the package version, creates its matching `v` tag, builds and checks both unsigned DMGs, and creates the GitHub Release after both builds pass. If a build fails after tagging, use **Re-run all jobs** on that workflow run to retry the same commit and tag. You can also start a release by pushing a matching tag yourself. No separate release branch or manual GitHub Release is needed.
