@@ -2,12 +2,13 @@
 
 - SVG files now have their metadata removed while keeping the drawing intact.
 - Processing errors are clearer and no longer expose internal file paths. Long messages wrap cleanly beside the action button.
-- Choose **Remember this choice for next time** when saving cleaned files, or select **Save output setting** in **Settings**. CleanSlate remembers your choice between launches and skips the output prompt on later cleans. Choose **Ask me each time** to bring the prompt back.
+- Choose **Remember this choice for next time** when saving cleaned files, or select **Save** in **Settings**. CleanSlate remembers your choice between launches and skips the output prompt on later cleans. Choose **Ask me each time** to bring the prompt back.
 - See which files were cleaned directly in the file list, including whether a new copy was saved or the original was updated.
 - A quieter heading and custom window bar keep the focus on your files. The gear icon opens Settings, and the window controls are at the top left.
 - File rows now use a red trash icon, action buttons use the new white arrow, and the macOS app icon has a soft blue background for contrast.
 - The file screen has a short description in place of numbered steps. The new remove-all icon reveals its label on hover or keyboard focus.
 - The rounded blue icon is also visible beside the app name and in the Dock during development runs.
+- Settings now has a cleaner output panel with simple **Save** and **Back** actions.
 
 CleanSlate removes metadata from images and videos locally. Download the DMG matching your Mac: `arm64` for Apple silicon or `x64` for Intel. Files are processed on your Mac with bundled FFmpeg and ExifTool, with SVG files cleaned directly; the app has no media upload or analytics feature. See the [README](https://github.com/alejordanze/cleanslate#readme) for usage and format limitations.
 
