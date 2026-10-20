@@ -9,6 +9,7 @@
 - The file screen has a short description in place of numbered steps. The new remove-all icon reveals its label on hover or keyboard focus.
 - The rounded blue icon is also visible beside the app name and in the Dock during development runs.
 - Settings now has a cleaner output panel with simple **Save** and **Back** actions.
+- The file queue stays in place while you visit Settings, and saved output choices are applied when you clean files.
 
 CleanSlate removes metadata from images and videos locally. Download the DMG matching your Mac: `arm64` for Apple silicon or `x64` for Intel. Files are processed on your Mac with bundled FFmpeg and ExifTool, with SVG files cleaned directly; the app has no media upload or analytics feature. See the [README](https://github.com/alejordanze/cleanslate#readme) for usage and format limitations.
 

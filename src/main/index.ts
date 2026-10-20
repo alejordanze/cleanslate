@@ -305,11 +305,19 @@ app.whenReady().then(() => {
           const action = document.querySelector('.process-bar > .button--primary');
           if (!(action instanceof HTMLButtonElement) || action.disabled) return false;
           if (!document.querySelector('.process-note')?.textContent?.includes('Cleaned copies will be saved')) return false;
-          action.click();
+          document.querySelector('button[aria-label="Open settings"]')?.click();
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-          return !document.querySelector('.save-dialog');
+          document.querySelector('button[aria-label="Back to files"]')?.click();
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          if (!document.querySelector('.file-row')) return false;
+          document.querySelector('.process-bar > .button--primary')?.click();
+          for (let attempt = 0; attempt < 40; attempt += 1) {
+            if (document.querySelector('.file-result')) return !document.querySelector('.save-dialog');
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          return false;
         })()`);
-        if (!savedChoiceSkipsDialog) return fail('saved output choice did not skip the chooser after reload');
+        if (!savedChoiceSkipsDialog) return fail('the file queue did not survive Settings or the saved output choice did not process it');
 
         const removeAllIconReady = await window.webContents.executeJavaScript(`(async () => {
           const button = document.querySelector('.remove-all-button');
