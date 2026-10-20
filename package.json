@@ -1,6 +1,6 @@
 {
   "name": "cleanslate",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "A private desktop app that removes metadata from images and videos locally.",
   "type": "module",
