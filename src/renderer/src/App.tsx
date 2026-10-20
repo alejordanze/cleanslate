@@ -1,18 +1,19 @@
 import { useEffect, useState, type DragEvent } from 'react';
 
-import type { FfmpegCheckResult } from '../../shared/ffmpeg';
-import type { MetadataSaveMode } from '../../shared/metadata';
+import type { MetadataProcessResult, MetadataSaveMode } from '../../shared/metadata';
 import folderOpenIcon from '../../../icons/open-folder.svg';
 import cleanSlateMark from '../../../icons/clear-folder.svg';
+import gearIcon from '../../../icons/gear-svgrepo-com.svg';
+import rightArrowIcon from '../../../icons/right-arrow.svg';
+import { clearLegacyOutputMode, readLegacyOutputMode } from './preferences';
+import { FileRow } from './FileRow';
 import {
   createMediaFile,
-  formatFileSize,
-  getFileStem,
   mergeMediaFiles,
   type MediaFile
 } from '../../shared/media';
 
-type RuntimeStatus = 'loading' | 'ready' | 'error';
+type Notice = { tone: 'warning' | 'success'; text: string };
 
 function getBridge() {
   const bridge = window.cleanslate;
@@ -40,23 +41,68 @@ function App() {
   const [isPicking, setIsPicking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [view, setView] = useState<'files' | 'settings'>('files');
+  const [savedMode, setSavedMode] = useState<MetadataSaveMode | null>(null);
+  const [draftMode, setDraftMode] = useState<MetadataSaveMode | null>(null);
   const [saveMode, setSaveMode] = useState<MetadataSaveMode>('new');
-  const [message, setMessage] = useState<string | null>(null);
-  const [ffmpegStatus, setFfmpegStatus] = useState<RuntimeStatus>('loading');
-  const [ffmpegResult, setFfmpegResult] = useState<FfmpegCheckResult | null>(null);
+  const [rememberChoice, setRememberChoice] = useState(false);
+  const [preferenceLoading, setPreferenceLoading] = useState(true);
+  const [isSavingPreference, setIsSavingPreference] = useState(false);
+  const [settingsNotice, setSettingsNotice] = useState<Notice | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [message, setMessage] = useState<Notice | null>(null);
+  const [fileResults, setFileResults] = useState<Map<string, MetadataProcessResult>>(() => new Map());
+  const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
-    async function checkFfmpeg() {
-      try {
-        const result = await getBridge().inspectFfmpeg();
-        setFfmpegResult(result);
-        setFfmpegStatus(result.available ? 'ready' : 'error');
-      } catch {
-        setFfmpegStatus('error');
-      }
+    const bridge = window.cleanslate;
+    if (!bridge) return;
+
+    let active = true;
+    void bridge.isWindowMaximized().then((maximized) => {
+      if (active) setIsMaximized(maximized);
+    }).catch(() => undefined);
+    const unsubscribe = bridge.onWindowMaximized(setIsMaximized);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const bridge = window.cleanslate;
+    if (!bridge) {
+      setPreferenceLoading(false);
+      return;
     }
 
-    void checkFfmpeg();
+    let active = true;
+    void (async () => {
+      try {
+        let mode = await bridge.getOutputPreference();
+        if (!active) return;
+
+        if (mode === null) {
+          const legacyMode = readLegacyOutputMode();
+          if (legacyMode) {
+            await bridge.saveOutputPreference(legacyMode);
+            clearLegacyOutputMode();
+            mode = legacyMode;
+          }
+        }
+
+        if (active) {
+          setSavedMode(mode);
+          setDraftMode(mode);
+        }
+      } catch {
+        if (active) setMessage({ tone: 'warning', text: 'Could not load your output setting. Choose one before cleaning.' });
+      } finally {
+        if (active) setPreferenceLoading(false);
+      }
+    })();
+
+    return () => { active = false; };
   }, []);
 
   function addFiles(incoming: MediaFile[]) {
@@ -65,6 +111,26 @@ function App() {
     }
 
     setFiles((current) => mergeMediaFiles(current, incoming));
+  }
+
+  async function saveOutputSetting() {
+    setIsSavingPreference(true);
+    setSettingsNotice(null);
+    try {
+      await getBridge().saveOutputPreference(draftMode);
+      setSavedMode(draftMode);
+      clearLegacyOutputMode();
+      setSettingsNotice({
+        tone: 'success',
+        text: draftMode === null
+          ? 'Saved. CleanSlate will ask where to save each time.'
+          : 'Saved. CleanSlate will use this option automatically.'
+      });
+    } catch {
+      setSettingsNotice({ tone: 'warning', text: 'Could not save the output setting. Please try again.' });
+    } finally {
+      setIsSavingPreference(false);
+    }
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
@@ -76,7 +142,7 @@ function App() {
     const droppedFiles = Array.from(event.dataTransfer.files);
 
     if (!bridge) {
-      setMessage('The Electron file bridge is unavailable. Restart the app and try again.');
+      setMessage({ tone: 'warning', text: 'The file bridge is unavailable. Restart the app and try again.' });
       return;
     }
 
@@ -101,7 +167,7 @@ function App() {
     });
 
     if (mediaFiles.length !== droppedFiles.length) {
-      setMessage('Only image and video files can be added. Unsupported files were skipped.');
+      setMessage({ tone: 'warning', text: 'Only image and video files can be added. Unsupported files were skipped.' });
     }
 
     addFiles(mediaFiles);
@@ -113,28 +179,43 @@ function App() {
 
     try {
       addFiles(await getBridge().pickMediaFiles());
-    } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : 'Could not open the media picker.');
+    } catch {
+      setMessage({ tone: 'warning', text: 'Could not open the file picker. Please try again.' });
     } finally {
       setIsPicking(false);
     }
   }
 
-  async function handleRemoveMetadata() {
+  async function handleRemoveMetadata(mode: MetadataSaveMode, remember = false) {
     if (files.length === 0 || isProcessing) {
       return;
     }
 
     setIsProcessing(true);
     setMessage(null);
+    setDialogError(null);
 
     try {
+      if (remember) {
+        try {
+          await getBridge().saveOutputPreference(mode);
+          setSavedMode(mode);
+          setDraftMode(mode);
+          clearLegacyOutputMode();
+        } catch {
+          setDialogError('Could not remember your choice. Try again or uncheck the box to continue.');
+          return;
+        }
+      }
+
+      setFileResults(new Map());
       const result = await getMetadataBridge().removeMetadata({
-        mode: saveMode,
+        mode,
         files: files.map(({ id, name, path, kind }) => ({ id, name, path, kind }))
       });
 
       const resultById = new Map(result.results.map((fileResult) => [fileResult.id, fileResult]));
+      setFileResults(resultById);
 
       setFiles((current) => current.map((file) => {
         const fileResult = resultById.get(file.id);
@@ -145,23 +226,26 @@ function App() {
       }));
 
       if (result.failed === 0) {
-        setMessage(
-          saveMode === 'new'
+        setMessage({
+          tone: 'success',
+          text: mode === 'new'
             ? `Metadata removed from ${result.succeeded} file${result.succeeded === 1 ? '' : 's'}. Cleaned copies were saved beside the originals.`
             : `Metadata removed from ${result.succeeded} file${result.succeeded === 1 ? '' : 's'}. The original files were updated.`
-        );
+        });
       } else {
-        const errors = result.results
-          .filter((fileResult) => !fileResult.ok && fileResult.error)
-          .map((fileResult) => fileResult.error)
-          .slice(0, 2)
-          .join(' ');
-        setMessage(`${result.succeeded} cleaned, ${result.failed} failed. ${errors}`.trim());
+        const firstError = result.results.find((fileResult) => !fileResult.ok)?.error;
+        const summary = result.succeeded > 0
+          ? `Cleaned ${result.succeeded} file${result.succeeded === 1 ? '' : 's'}. `
+          : '';
+        const detail = result.failed === 1 && firstError
+          ? firstError
+          : `Could not process ${result.failed} files. Check that they open normally and try again.`;
+        setMessage({ tone: 'warning', text: `${summary}${detail}` });
       }
 
       setIsSaveDialogOpen(false);
-    } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : 'Could not remove metadata.');
+    } catch {
+      setMessage({ tone: 'warning', text: 'Could not remove metadata. Please try again.' });
       setIsSaveDialogOpen(false);
     } finally {
       setIsProcessing(false);
@@ -170,6 +254,33 @@ function App() {
 
   function removeFile(id: string) {
     setFiles((current) => current.filter((file) => file.id !== id));
+    setFileResults((current) => {
+      const next = new Map(current);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  function openSettings() {
+    if (view === 'settings') {
+      setView('files');
+      return;
+    }
+    setDraftMode(savedMode);
+    setSettingsNotice(null);
+    setView('settings');
+  }
+
+  function startCleaning() {
+    setMessage(null);
+    if (savedMode !== null) {
+      void handleRemoveMetadata(savedMode);
+      return;
+    }
+    setSaveMode('new');
+    setRememberChoice(false);
+    setDialogError(null);
+    setIsSaveDialogOpen(true);
   }
 
   function handleDragLeave(event: DragEvent<HTMLDivElement>) {
@@ -178,14 +289,41 @@ function App() {
     }
   }
 
-  const runtimeLabel =
-    ffmpegStatus === 'loading'
-      ? 'Checking FFmpeg'
-      : ffmpegStatus === 'ready'
-        ? 'FFmpeg ready'
-        : 'FFmpeg unavailable';
-
   return (
+    <div className="window-root">
+      <header className="window-bar" aria-label="Window controls">
+        <div className="window-controls">
+          <button className="window-control window-control--close" type="button" onClick={() => getBridge().closeWindow()} aria-label="Close window" title="Close window">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m5 5 6 6m0-6-6 6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
+          </button>
+          <button className="window-control window-control--minimize" type="button" onClick={() => getBridge().minimizeWindow()} aria-label="Minimize window" title="Minimize window">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4.5 8h7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
+          </button>
+          <button
+            className="window-control window-control--maximize"
+            type="button"
+            onClick={() => void getBridge().toggleMaximizeWindow().then(setIsMaximized)}
+            aria-label={isMaximized ? 'Restore window' : 'Maximize window'}
+            title={isMaximized ? 'Restore window' : 'Maximize window'}
+          >
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              {isMaximized ? <path d="M6 4.5h5.5V10M4.5 6H10v5.5H4.5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                : <rect x="4.5" y="4.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />}
+            </svg>
+          </button>
+        </div>
+        <div className="window-bar__drag" aria-hidden="true" />
+        <button
+          className={`settings-icon-button${view === 'settings' ? ' is-active' : ''}`}
+          type="button"
+          onClick={openSettings}
+          aria-label={view === 'settings' ? 'Back to files' : 'Open settings'}
+          title={view === 'settings' ? 'Back to files' : 'Settings'}
+          aria-pressed={view === 'settings'}
+        >
+          <img src={gearIcon} alt="" />
+        </button>
+      </header>
     <main className="app-shell">
       <header className="app-header">
         <div className="brand">
@@ -193,13 +331,9 @@ function App() {
           <span className="brand-name">CleanSlate</span>
           <span className="brand-tag">media privacy</span>
         </div>
-
-        <span className="runtime-pill" data-state={ffmpegStatus}>
-          <span className="runtime-dot" />
-          {runtimeLabel}
-        </span>
       </header>
 
+      {view === 'files' ? <>
       <section className="page-heading">
         <div>
           <span className="section-kicker">01 / Add media</span>
@@ -214,7 +348,7 @@ function App() {
             <h2>{files.length === 0 ? 'Nothing added yet' : `${files.length} file${files.length === 1 ? '' : 's'} ready`}</h2>
           </div>
           {files.length > 0 && (
-            <button className="text-button" type="button" onClick={() => setFiles([])}>
+            <button className="text-button" type="button" onClick={() => { setFiles([]); setFileResults(new Map()); }}>
               Clear all
             </button>
           )}
@@ -242,24 +376,7 @@ function App() {
             <div className="file-list">
               <span className="file-list-hint">Drop more files anywhere in this queue</span>
               {files.map((file) => (
-                <article className="file-row" key={file.id}>
-                  <span className={`file-kind file-kind--${file.kind}`} aria-hidden="true">
-                    {file.kind === 'image' ? 'IMG' : 'VID'}
-                  </span>
-                  <div className="file-details">
-                    <strong title={file.name}>{getFileStem(file.name)}</strong>
-                    <span>
-                      {file.extension ? `.${file.extension}` : 'Media file'}
-                      <span className="file-meta-separator">/</span>
-                      {formatFileSize(file.size)}
-                      <span className="file-meta-separator">/</span>
-                      {file.source === 'drop' ? 'Dropped' : 'Attached'}
-                    </span>
-                  </div>
-                  <button className="remove-button" type="button" onClick={() => removeFile(file.id)} aria-label={`Remove ${file.name}`}>
-                    Remove
-                  </button>
-                </article>
+                <FileRow key={file.id} file={file} result={fileResults.get(file.id)} onRemove={removeFile} />
               ))}
             </div>
           )}
@@ -273,12 +390,26 @@ function App() {
             {isPicking ? 'Opening...' : 'Attach files'}
           </button>
           {message ? (
-            <span className="process-note process-note--warning" role="status">{message}</span>
+            <span className={`process-note process-note--${message.tone}`} role="status">
+              {message.tone === 'warning' && (
+                <svg className="notice-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.7" />
+                  <path d="M10 9v4m0-7h.01" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                </svg>
+              )}
+              <span>{message.text}</span>
+            </span>
           ) : (
             <div className="process-copy">
               <span className="process-label">Ready when you are</span>
               <span className="process-note">
-                {files.length === 0 ? 'Add at least one image or video to begin.' : 'Metadata removal will be available in the next step.'}
+                {files.length === 0
+                  ? 'Add at least one image or video to begin.'
+                  : savedMode === 'new'
+                    ? 'Cleaned copies will be saved beside the originals. Change this in Settings.'
+                    : savedMode === 'replace'
+                      ? 'Original files will be replaced. Change this in Settings.'
+                      : 'Choose where to save the cleaned files in the next step.'}
               </span>
             </div>
           )}
@@ -286,16 +417,57 @@ function App() {
         <button
           className="button button--primary"
           type="button"
-          onClick={() => {
-            setMessage(null);
-            setIsSaveDialogOpen(true);
-          }}
-          disabled={files.length === 0 || isProcessing}
+          onClick={startCleaning}
+          disabled={files.length === 0 || isProcessing || preferenceLoading}
         >
           {isProcessing ? 'Cleaning...' : 'Remove metadata'}
-          <span className="button-arrow">-&gt;</span>
+          <img className="button-arrow" src={rightArrowIcon} alt="" />
         </button>
       </footer>
+      </> : <>
+        <section className="page-heading">
+          <span className="section-kicker">Preferences</span>
+          <h1>Keep it <em>your way.</em></h1>
+        </section>
+        <section className="settings-section" aria-labelledby="settings-title">
+          <div className="section-heading">
+            <div>
+              <span className="section-kicker">Output</span>
+              <h2 id="settings-title">Default save option</h2>
+            </div>
+          </div>
+          <p className="settings-copy">Save an output option to use it automatically whenever you clean files.</p>
+          <div className="save-options settings-options">
+            <label className={`save-option${draftMode === 'new' ? ' is-selected' : ''}`}>
+              <input type="radio" name="preferred-mode" value="new" checked={draftMode === 'new'} onChange={() => { setDraftMode('new'); setSettingsNotice(null); }} disabled={preferenceLoading || isSavingPreference} />
+              <span>
+                <strong>Save new cleaned copies</strong>
+                <small>Keep originals and save copies beside them with <code>_cleaned</code> in the filename.</small>
+              </span>
+            </label>
+            <label className={`save-option${draftMode === 'replace' ? ' is-selected' : ''}`}>
+              <input type="radio" name="preferred-mode" value="replace" checked={draftMode === 'replace'} onChange={() => { setDraftMode('replace'); setSettingsNotice(null); }} disabled={preferenceLoading || isSavingPreference} />
+              <span>
+                <strong>Replace the original files</strong>
+                <small>Clean each file in place. This cannot be undone.</small>
+              </span>
+            </label>
+            <label className={`save-option${draftMode === null ? ' is-selected' : ''}`}>
+              <input type="radio" name="preferred-mode" value="ask" checked={draftMode === null} onChange={() => { setDraftMode(null); setSettingsNotice(null); }} disabled={preferenceLoading || isSavingPreference} />
+              <span>
+                <strong>Ask me each time</strong>
+                <small>Choose where to save each batch when you clean it.</small>
+              </span>
+            </label>
+          </div>
+          <div className="settings-actions">
+            {settingsNotice && <span className={`settings-notice settings-notice--${settingsNotice.tone}`} role="status">{settingsNotice.text}</span>}
+            <button className="button button--primary" type="button" onClick={() => void saveOutputSetting()} disabled={preferenceLoading || isSavingPreference || draftMode === savedMode}>
+              {isSavingPreference ? 'Saving...' : 'Save output setting'}
+            </button>
+          </div>
+        </section>
+      </>}
 
       {isSaveDialogOpen && (
         <div className="modal-backdrop">
@@ -338,21 +510,28 @@ function App() {
               </label>
             </div>
 
+            <label className="remember-option">
+              <input type="checkbox" checked={rememberChoice} onChange={(event) => setRememberChoice(event.target.checked)} />
+              Remember this choice for next time
+            </label>
+
+            {dialogError && <p className="dialog-error" role="alert">{dialogError}</p>}
+
             <div className="save-dialog-actions">
               <button className="text-button" type="button" onClick={() => setIsSaveDialogOpen(false)} disabled={isProcessing}>
                 Cancel
               </button>
-              <button className="button button--primary" type="button" onClick={() => void handleRemoveMetadata()} disabled={isProcessing}>
+              <button className="button button--primary" type="button" onClick={() => void handleRemoveMetadata(saveMode, rememberChoice)} disabled={isProcessing}>
                 {isProcessing ? 'Cleaning...' : 'Clean files'}
-                <span className="button-arrow">-&gt;</span>
+                <img className="button-arrow" src={rightArrowIcon} alt="" />
               </button>
             </div>
           </section>
         </div>
       )}
 
-      {ffmpegResult && <span className="sr-only">{ffmpegResult.versionLine}</span>}
     </main>
+    </div>
   );
 }
 

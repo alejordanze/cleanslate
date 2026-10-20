@@ -1,9 +1,10 @@
 import { execFile as execFileCallback } from 'node:child_process';
-import { copyFile, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
+import { DOMParser } from '@xmldom/xmldom';
 import { exiftoolPath } from 'exiftool-vendored';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,7 +23,7 @@ afterEach(async () => {
 
 async function tags(path: string): Promise<Record<string, string>> {
   const binary = await exiftoolPath();
-  const { stdout } = await execFile(binary, ['-json', '-FileType', '-Artist', '-Comment', path]);
+  const { stdout } = await execFile(binary, ['-json', '-FileType', '-Artist', '-Comment', '-Title', '-Description', path]);
   return JSON.parse(stdout)[0] as Record<string, string>;
 }
 
@@ -67,4 +68,46 @@ describe('real metadata removal', () => {
     expect((await tags(input)).FileType).toBe('HEIC');
     expect((await tags(input)).Artist).toBeUndefined();
   }, 15_000);
+
+  it.each(['new', 'replace'] as const)('cleans SVG metadata in %s mode while preserving the drawing', async (mode) => {
+    testDirectory = await mkdtemp(join(tmpdir(), 'cleanslate-svg-'));
+    const input = join(testDirectory, 'sample.svg');
+    await copyFile(join(fixtureDirectory, 'photo.svg'), input);
+    const original = await readFile(input, 'utf8');
+
+    const result = await removeMetadata({ mode, files: [
+      { id: 'svg', name: 'sample.svg', path: input, kind: 'image' }
+    ] }, null);
+
+    expect(result.results[0]).toMatchObject({ ok: true, error: null });
+    const cleaned = await readFile(result.results[0].outputPath!, 'utf8');
+    const document = new DOMParser().parseFromString(cleaned, 'image/svg+xml');
+    expect(document.documentElement.localName).toBe('svg');
+    expect(document.getElementsByTagName('rect').length).toBe(1);
+    expect(document.getElementsByTagName('rect')[0].getAttribute('fill')).toBe('#0866ed');
+    expect((await tags(result.results[0].outputPath!)).FileType).toBe('SVG');
+    expect((await tags(result.results[0].outputPath!)).Title).toBeUndefined();
+    expect((await tags(result.results[0].outputPath!)).Description).toBeUndefined();
+    expect(cleaned).not.toContain('CleanSlateFixture');
+    expect(cleaned).not.toMatch(/<metadata|<title|<desc|inkscape:|data-owner|<!--/);
+    if (mode === 'new') expect(await readFile(input, 'utf8')).toBe(original);
+    else expect(cleaned).not.toBe(original);
+  });
+
+  it('keeps the original SVG when it is malformed', async () => {
+    testDirectory = await mkdtemp(join(tmpdir(), 'cleanslate-svg-'));
+    const input = join(testDirectory, 'invalid.svg');
+    const invalid = '<svg xmlns="http://www.w3.org/2000/svg"><path></svg>';
+    await writeFile(input, invalid);
+
+    const result = await removeMetadata({ mode: 'replace', files: [
+      { id: 'svg', name: 'invalid.svg', path: input, kind: 'image' }
+    ] }, null);
+
+    expect(result.results[0]).toMatchObject({
+      ok: false,
+      error: 'Could not process this SVG image. Check that it is a valid SVG file.'
+    });
+    expect(await readFile(input, 'utf8')).toBe(invalid);
+  });
 });

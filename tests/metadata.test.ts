@@ -38,7 +38,7 @@ function successfulFfmpeg() {
 
 describe('metadata removal', () => {
   it.each([
-    ...supportedImageExtensions.map((extension) => [extension, 'image'] as const),
+    ...supportedImageExtensions.filter((extension) => extension !== 'svg').map((extension) => [extension, 'image'] as const),
     ...supportedVideoExtensions.map((extension) => [extension, 'video'] as const)
   ])('loads a dummy .%s file and saves a cleaned copy', async (extension, kind) => {
     const input = join(testDirectory, `sample.${extension}`);
@@ -130,7 +130,7 @@ describe('metadata removal', () => {
     ] }, null);
 
     expect(result.failed).toBe(1);
-    expect(result.results[0].error).toBe('conversion failed');
+    expect(result.results[0].error).toBe('Could not process this image. The file may be damaged or unsupported.');
     expect(await readFile(input, 'utf8')).toBe('original data');
     expect(await readdir(testDirectory)).toEqual(['photo.jpg']);
   });
@@ -144,7 +144,10 @@ describe('metadata removal', () => {
       { id: 'photo', name: 'photo.heic', path: input, kind: 'image' }
     ] }, null);
 
-    expect(result.results[0]).toMatchObject({ ok: false, error: 'Invalid HEIC data' });
+    expect(result.results[0]).toMatchObject({
+      ok: false,
+      error: 'Could not process this image. The file may be damaged or unsupported.'
+    });
     expect(await readFile(input, 'utf8')).toBe('original data');
     expect(await readdir(testDirectory)).toEqual(['photo.heic']);
     expect(ffmpeg).not.toHaveBeenCalled();
@@ -163,6 +166,7 @@ describe('metadata removal', () => {
     expect(result.succeeded).toBe(1);
     expect(result.failed).toBe(1);
     expect(result.results.map((file) => file.ok)).toEqual([false, true]);
+    expect(result.results[0].error).toBe('Could not open this image. Check that the file still exists and is readable.');
     expect(ffmpeg).toHaveBeenCalledTimes(1);
   });
 });

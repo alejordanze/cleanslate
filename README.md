@@ -30,12 +30,12 @@ This checks that the exact DMG was produced by this repository's GitHub Actions 
 ## Use CleanSlate
 
 1. Drag images or videos into the window, or choose **Attach files**.
-2. Select **Remove metadata** and choose **Save new cleaned copies** or **Replace the original files**.
+2. Select **Remove metadata** and choose **Save new cleaned copies** or **Replace the original files**. Check **Remember this choice for next time**, or choose an output option in **Settings** and select **Save output setting**. Once saved, CleanSlate uses that option directly on later cleans; choose **Ask me each time** in Settings to show the chooser again.
 3. Cleaned copies are saved beside the originals with `_cleaned` in the filename. Existing cleaned copies are replaced only after you confirm. Replacing originals cannot be undone, so try a copy first when a file is important.
 
-Most images are re-encoded with bundled FFmpeg; this can change file size, quality, or color handling. HEIC, HEIF, and writable camera RAW files are copied and cleaned with bundled ExifTool instead. Video streams are copied without re-encoding while container and stream metadata are removed where FFmpeg supports it. The app reports files it could not clean.
+Most images are re-encoded with bundled FFmpeg; this can change file size, quality, or color handling. HEIC, HEIF, and writable camera RAW files are copied and cleaned with bundled ExifTool instead. SVG files are cleaned as XML: metadata, titles, descriptions, comments, and common editor annotations are removed while drawing elements are kept. Video streams are copied without re-encoding while container and stream metadata are removed where FFmpeg supports it. The app reports files it could not clean.
 
-Real-file tests cover PNG, JPEG, HEIC, DNG, TIFF, MP4, and MOV. The picker accepts additional image and video extensions, but their cleaning results have not all been verified. Some RAW and TIFF metadata is required for the image to remain readable and may remain after cleaning. CleanSlate does not clear filenames, Finder tags, macOS extended attributes, sidecar files, or information visible or audible in the media itself. It is not a secure deletion tool. Check sensitive output before sharing it.
+Real-file tests cover PNG, JPEG, HEIC, DNG, TIFF, SVG, MP4, and MOV. The picker accepts additional image and video extensions, but their cleaning results have not all been verified. Some RAW and TIFF metadata is required for the image to remain readable and may remain after cleaning. CleanSlate does not clear filenames, Finder tags, macOS extended attributes, sidecar files, or information visible or audible in the media itself. It is not a secure deletion tool. Check sensitive output before sharing it.
 
 ## Privacy and verification
 

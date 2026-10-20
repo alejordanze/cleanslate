@@ -6,6 +6,7 @@ import { dialog, type BrowserWindow } from 'electron';
 
 import { runFfmpeg } from '../shared/ffmpeg';
 import { runExiftool } from '../shared/exiftool';
+import { cleanSvg } from './svg';
 import type {
   MetadataProcessRequest,
   MetadataProcessResponse,
@@ -13,17 +14,22 @@ import type {
   MetadataProcessTarget
 } from '../shared/metadata';
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Unknown processing error.';
-}
+type ProcessingStage = 'open' | 'process' | 'save';
 
-function lastMeaningfulLine(output: string): string | null {
-  const lines = output
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+function friendlyError(error: unknown, target: MetadataProcessTarget, stage: ProcessingStage): string {
+  const kind = target.kind === 'image' ? 'image' : 'video';
+  const code = (error as NodeJS.ErrnoException)?.code;
 
-  return lines.at(-1) ?? null;
+  if (stage === 'open' || code === 'ENOENT') {
+    return `Could not open this ${kind}. Check that the file still exists and is readable.`;
+  }
+  if (stage === 'save' || code === 'EACCES' || code === 'EPERM' || code === 'ENOSPC') {
+    return 'Could not save the cleaned file. Check folder permissions and free space.';
+  }
+  if (extname(target.path).toLowerCase() === '.svg') {
+    return 'Could not process this SVG image. Check that it is a valid SVG file.';
+  }
+  return `Could not process this ${kind}. The file may be damaged or unsupported.`;
 }
 
 function cleanedPath(target: MetadataProcessTarget): string {
@@ -128,6 +134,7 @@ async function processOne(
 ): Promise<MetadataProcessResult> {
   let outputPath: string | null = mode === 'new' ? null : target.path;
   let tempPath: string | null = null;
+  let stage: ProcessingStage = 'open';
 
   try {
     if (!target.path) {
@@ -141,6 +148,7 @@ async function processOne(
     }
 
     outputPath = mode === 'new' ? cleanedPath(target) : target.path;
+    stage = 'save';
 
     if (mode === 'new' && (await fileExists(outputPath)) && !(await confirmOverwrite(owner, outputPath))) {
       return {
@@ -154,18 +162,22 @@ async function processOne(
     }
 
     tempPath = temporaryPath(outputPath);
-    if (target.kind === 'image' && exiftoolImageExtensions.has(extname(target.path).slice(1).toLowerCase())) {
+    stage = 'process';
+    if (target.kind === 'image' && extname(target.path).toLowerCase() === '.svg') {
+      await copyFile(target.path, tempPath);
+      await cleanSvg(tempPath);
+    } else if (target.kind === 'image' && exiftoolImageExtensions.has(extname(target.path).slice(1).toLowerCase())) {
       await copyFile(target.path, tempPath);
       await runExiftool(tempPath);
     } else {
       const ffmpegResult = await runFfmpeg(ffmpegArgs(target, tempPath));
 
       if (ffmpegResult.code !== 0) {
-        const detail = lastMeaningfulLine(ffmpegResult.stderr) ?? lastMeaningfulLine(ffmpegResult.stdout);
-        throw new Error(detail ?? `FFmpeg exited with code ${ffmpegResult.code ?? 'unknown'}.`);
+        throw new Error(`FFmpeg exited with code ${ffmpegResult.code ?? 'unknown'}: ${ffmpegResult.stderr || ffmpegResult.stdout}`);
       }
     }
 
+    stage = 'save';
     await chmod(tempPath, inputStats.mode & 0o777);
     await replaceFile(tempPath, outputPath);
     tempPath = null;
@@ -187,7 +199,7 @@ async function processOne(
       outputPath,
       size: null,
       ok: false,
-      error: errorMessage(error)
+      error: friendlyError(error, target, stage)
     };
   } finally {
     if (tempPath) {

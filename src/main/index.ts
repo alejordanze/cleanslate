@@ -1,5 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectBundledFfmpeg } from '../shared/ffmpeg';
@@ -10,10 +12,16 @@ import {
   supportedMediaExtensions,
   type MediaFile
 } from '../shared/media';
-import type { MetadataProcessRequest } from '../shared/metadata';
+import type { MetadataProcessRequest, MetadataSaveMode } from '../shared/metadata';
+import { readOutputPreference, writeOutputPreference } from './outputPreference';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const smokeUserData = process.argv.includes('--smoke-test') ? mkdtempSync(join(tmpdir(), 'cleanslate-smoke-')) : null;
+if (smokeUserData) {
+  app.setPath('userData', smokeUserData);
+  app.on('will-quit', () => rmSync(smokeUserData, { recursive: true, force: true }));
+}
 
 const rendererUrl = app.isPackaged
   ? ''
@@ -33,6 +41,7 @@ function createWindow(show = true) {
     minWidth: 960,
     minHeight: 680,
     backgroundColor: '#e2e6ee',
+    frame: false,
     show,
     title: 'CleanSlate',
     webPreferences: {
@@ -57,12 +66,49 @@ function createWindow(show = true) {
     mainWindow = null;
   });
 
+  mainWindow.on('maximize', () => mainWindow?.webContents.send('window:maximized', true));
+  mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window:maximized', false));
+
   return mainWindow;
 }
 
 ipcMain.handle('ffmpeg:inspect', async (event) => {
   assertAppSender(event);
   return inspectBundledFfmpeg();
+});
+
+ipcMain.handle('preferences:get-output', async (event): Promise<MetadataSaveMode | null> => {
+  assertAppSender(event);
+  return readOutputPreference(join(app.getPath('userData'), 'preferences.json'));
+});
+
+ipcMain.handle('preferences:save-output', async (event, mode: MetadataSaveMode | null): Promise<void> => {
+  assertAppSender(event);
+  if (mode !== null && mode !== 'new' && mode !== 'replace') throw new Error('Choose a valid output setting.');
+  await writeOutputPreference(join(app.getPath('userData'), 'preferences.json'), mode);
+});
+
+ipcMain.on('window:close', (event) => {
+  assertAppSender(event);
+  mainWindow?.close();
+});
+
+ipcMain.on('window:minimize', (event) => {
+  assertAppSender(event);
+  mainWindow?.minimize();
+});
+
+ipcMain.handle('window:toggle-maximize', (event): boolean => {
+  assertAppSender(event);
+  if (!mainWindow) return false;
+  if (mainWindow.isMaximized()) mainWindow.unmaximize();
+  else mainWindow.maximize();
+  return mainWindow.isMaximized();
+});
+
+ipcMain.handle('window:is-maximized', (event): boolean => {
+  assertAppSender(event);
+  return mainWindow?.isMaximized() ?? false;
 });
 
 ipcMain.handle('metadata:remove', async (event, request: MetadataProcessRequest) => {
@@ -116,7 +162,8 @@ ipcMain.handle('media:pick', async (event): Promise<MediaFile[]> => {
 
 app.whenReady().then(() => {
   if (process.argv.includes('--smoke-test')) {
-    const window = createWindow(false);
+    const checkControls = process.argv.includes('--smoke-controls');
+    const window = createWindow(checkControls);
     const fail = (message: string) => {
       console.error(`Smoke test failed: ${message}`);
       app.exit(1);
@@ -133,21 +180,185 @@ app.whenReady().then(() => {
         const cspPresent = await window.webContents.executeJavaScript(
           'Boolean(document.querySelector("meta[http-equiv=Content-Security-Policy]"))'
         );
+        const customBarReady = await window.webContents.executeJavaScript(`(async () => {
+          const bar = document.querySelector('.window-bar');
+          const controls = ['Close window', 'Minimize window', 'Maximize window']
+            .every(label => bar?.querySelector('button[aria-label="' + label + '"]'));
+          const gear = bar?.querySelector('.settings-icon-button img');
+          if (!(gear instanceof HTMLImageElement)) return false;
+          await gear.decode();
+          const dragRegion = bar && getComputedStyle(bar).getPropertyValue('-webkit-app-region');
+          return Boolean(controls && dragRegion === 'drag' && gear.naturalWidth > 0 && !document.querySelector('.runtime-pill'));
+        })()`);
+        const settingsReady = await window.webContents.executeJavaScript(`(async () => {
+          const settingsButton = document.querySelector('button[aria-label="Open settings"]');
+          settingsButton?.click();
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const ready = Boolean(document.querySelector('#settings-title') && document.querySelector('input[name="preferred-mode"]:checked') && document.querySelector('.settings-actions button'));
+          const backButton = document.querySelector('button[aria-label="Back to files"]');
+          backButton?.click();
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          return ready;
+        })()`);
+        const arrowReady = await window.webContents.executeJavaScript(`(async () => {
+          const arrow = document.querySelector('.button-arrow');
+          if (!(arrow instanceof HTMLImageElement)) return false;
+          await arrow.decode();
+          return arrow.naturalWidth > 0;
+        })()`);
+        window.setSize(960, 680);
+        const longWarningFits = await window.webContents.executeJavaScript(`(() => {
+          const bar = document.querySelector('.process-bar');
+          const info = document.querySelector('.process-info');
+          const copy = document.querySelector('.process-copy');
+          const action = bar?.querySelector(':scope > .button');
+          if (!bar || !info || !copy || !action) return false;
+          const warning = document.createElement('span');
+          warning.className = 'process-note process-note--warning';
+          warning.textContent = 'Could not process this image. '.repeat(12);
+          copy.replaceWith(warning);
+          const barBounds = bar.getBoundingClientRect();
+          const actionBounds = action.getBoundingClientRect();
+          const result = bar.scrollWidth <= bar.clientWidth &&
+            actionBounds.left > info.getBoundingClientRect().left &&
+            actionBounds.right <= barBounds.right &&
+            action.querySelector('.button-arrow')?.getBoundingClientRect().width > 0;
+          warning.replaceWith(copy);
+          return result;
+        })()`);
+        const preferenceBridgeReady = await window.webContents.executeJavaScript(`(async () => {
+          const mode = await window.cleanslate.getOutputPreference();
+          return mode === null || mode === 'new' || mode === 'replace';
+        })()`);
         const ffmpeg = await inspectBundledFfmpeg();
         await inspectBundledExiftool();
 
-        if (!rendered || !bridgeReady || !cspPresent || !ffmpeg.available) {
+        if (!rendered || !bridgeReady || !cspPresent || !customBarReady || !settingsReady || !arrowReady || !longWarningFits || !preferenceBridgeReady || !ffmpeg.available) {
           fail(!rendered
             ? 'renderer did not mount'
             : !bridgeReady
               ? 'sandboxed preload bridge could not inspect FFmpeg'
               : !cspPresent
                 ? 'production content security policy is missing'
+                : !customBarReady
+                  ? 'custom title bar or gear icon did not load'
+                : !settingsReady
+                  ? 'settings view did not open'
+                  : !arrowReady
+                    ? 'button arrow icon did not load'
+                    : !longWarningFits
+                      ? 'long warning broke the action bar layout'
+                      : !preferenceBridgeReady
+                        ? 'saved output preference bridge is unavailable'
                 : ffmpeg.error ?? 'FFmpeg is unavailable');
           return;
         }
 
-        console.log('Smoke test passed: renderer, preload bridge, content policy, FFmpeg, and ExifTool are ready.');
+        const outputSettingSaved = await window.webContents.executeJavaScript(`(async () => {
+          document.querySelector('button[aria-label="Open settings"]')?.click();
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const choice = document.querySelector('input[name="preferred-mode"][value="new"]');
+          const save = document.querySelector('.settings-actions button');
+          if (!(choice instanceof HTMLInputElement) || !(save instanceof HTMLButtonElement)) return false;
+          choice.click();
+          save.click();
+          for (let attempt = 0; attempt < 40; attempt += 1) {
+            if (await window.cleanslate.getOutputPreference() === 'new') return true;
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          return false;
+        })()`);
+        if (!outputSettingSaved) return fail('Settings did not save the output choice');
+
+        await new Promise<void>((resolve) => {
+          window.webContents.once('did-finish-load', () => resolve());
+          window.reload();
+        });
+        const savedChoiceSkipsDialog = await window.webContents.executeJavaScript(`(async () => {
+          document.querySelector('button[aria-label="Open settings"]')?.click();
+          for (let attempt = 0; attempt < 40; attempt += 1) {
+            if (document.querySelector('input[name="preferred-mode"][value="new"]:checked')) break;
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          if (!document.querySelector('input[name="preferred-mode"][value="new"]:checked')) return false;
+          document.querySelector('button[aria-label="Back to files"]')?.click();
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const board = document.querySelector('.file-board');
+          if (!board) return false;
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(new File(['<svg xmlns="http://www.w3.org/2000/svg"/>'], 'smoke.svg', { type: 'image/svg+xml' }));
+          board.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer }));
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const action = document.querySelector('.process-bar > .button--primary');
+          if (!(action instanceof HTMLButtonElement) || action.disabled) return false;
+          if (!document.querySelector('.process-note')?.textContent?.includes('Cleaned copies will be saved')) return false;
+          action.click();
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          return !document.querySelector('.save-dialog');
+        })()`);
+        if (!savedChoiceSkipsDialog) return fail('saved output choice did not skip the chooser after reload');
+
+        await window.webContents.executeJavaScript('window.cleanslate.saveOutputPreference(null)');
+        await new Promise<void>((resolve) => {
+          window.webContents.once('did-finish-load', () => resolve());
+          window.reload();
+        });
+        const rememberedChoiceSaved = await window.webContents.executeJavaScript(`(async () => {
+          const board = document.querySelector('.file-board');
+          if (!board) return false;
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(new File(['<svg xmlns="http://www.w3.org/2000/svg"/>'], 'remember.svg', { type: 'image/svg+xml' }));
+          board.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer }));
+          for (let attempt = 0; attempt < 40; attempt += 1) {
+            const action = document.querySelector('.process-bar > .button--primary');
+            if (action instanceof HTMLButtonElement && !action.disabled) {
+              action.click();
+              break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const dialog = document.querySelector('.save-dialog');
+          const choice = dialog?.querySelector('input[name="save-mode"][value="replace"]');
+          const remember = dialog?.querySelector('.remember-option input');
+          const clean = dialog?.querySelector('.save-dialog-actions .button--primary');
+          if (!(choice instanceof HTMLInputElement) || !(remember instanceof HTMLInputElement) || !(clean instanceof HTMLButtonElement)) return false;
+          choice.click();
+          remember.click();
+          clean.click();
+          for (let attempt = 0; attempt < 40; attempt += 1) {
+            if (await window.cleanslate.getOutputPreference() === 'replace') return true;
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          return false;
+        })()`);
+        if (!rememberedChoiceSaved) return fail('Remember this choice did not save the selected output');
+
+        if (checkControls) {
+          const waitUntil = async (condition: () => boolean): Promise<boolean> => {
+            for (let attempt = 0; attempt < 40; attempt += 1) {
+              if (condition()) return true;
+              await new Promise((resolve) => setTimeout(resolve, 50));
+            }
+            return condition();
+          };
+
+          await window.webContents.executeJavaScript('document.querySelector(".window-control--maximize").click()');
+          if (!(await waitUntil(() => window.isMaximized()))) return fail('maximize control did not work');
+          await window.webContents.executeJavaScript('document.querySelector(".window-control--maximize").click()');
+          if (!(await waitUntil(() => !window.isMaximized()))) return fail('restore control did not work');
+
+          await window.webContents.executeJavaScript('document.querySelector(".window-control--minimize").click()');
+          if (!(await waitUntil(() => window.isMinimized()))) return fail('minimize control did not work');
+          window.restore();
+
+          let closed = false;
+          window.once('closed', () => { closed = true; });
+          void window.webContents.executeJavaScript('document.querySelector(".window-control--close").click()').catch(() => undefined);
+          if (!(await waitUntil(() => closed))) return fail('close control did not work');
+        }
+
+        console.log('Smoke test passed: renderer, custom title bar, settings, warning layout, arrow icon, saved and remembered output choices, preload bridge, content policy, FFmpeg, and ExifTool are ready.');
         app.exit(0);
       } catch (error) {
         fail(error instanceof Error ? error.message : String(error));

@@ -28,7 +28,7 @@ if (process.platform !== 'darwin') {
   throw new Error('The macOS icon must be built on macOS.');
 }
 
-console.log('Rendering the Clear Folder SVG with Electron.');
+console.log('Rendering the CleanSlate app icon with Electron.');
 
 async function buildIcon() {
   let browserWindow;
@@ -50,16 +50,21 @@ async function buildIcon() {
     canvas.width = 1024;
     canvas.height = 1024;
     const context = canvas.getContext('2d');
+    context.fillStyle = '#eaf2ff';
+    context.beginPath();
+    context.roundRect(32, 32, 960, 960, 210);
+    context.fill();
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     return {
       cornerAlpha: context.getImageData(0, 0, 1, 1).data[3],
+      backgroundColor: Array.from(context.getImageData(512, 100, 1, 1).data).slice(0, 3).join(','),
       markAlpha: context.getImageData(512, 700, 1, 1).data[3],
       png: canvas.toDataURL('image/png').split(',')[1]
     };
     })()`);
 
-    if (rendered.cornerAlpha !== 0 || rendered.markAlpha !== 255) {
-      throw new Error('The rendered logo did not have a transparent canvas and an opaque mark.');
+    if (rendered.cornerAlpha !== 0 || rendered.backgroundColor !== '234,242,255' || rendered.markAlpha !== 255) {
+      throw new Error('The rendered app icon did not have the expected rounded background and opaque mark.');
     }
 
     temporaryDirectory = await mkdtemp(join(tmpdir(), 'cleanslate-icon-'));
@@ -75,7 +80,7 @@ async function buildIcon() {
     const temporaryIcon = join(temporaryDirectory, 'cleanslate.icns');
     await execFile('iconutil', ['-c', 'icns', iconset, '-o', temporaryIcon]);
     await copyFile(temporaryIcon, outputPath);
-    console.log(`Built transparent CleanSlate icon: ${outputPath}`);
+    console.log(`Built CleanSlate icon with a light blue background: ${outputPath}`);
   } finally {
     browserWindow?.destroy();
     if (temporaryDirectory) await rm(temporaryDirectory, { recursive: true, force: true });
