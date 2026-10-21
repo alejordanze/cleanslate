@@ -1,15 +1,9 @@
-## CleanSlate 0.1.2
+## CleanSlate 0.1.3
 
-- SVG files now have their metadata removed while keeping the drawing intact.
-- Processing errors are clearer and no longer expose internal file paths. Long messages wrap cleanly beside the action button.
-- Choose **Remember this choice for next time** when saving cleaned files, or select **Save** in **Settings**. CleanSlate remembers your choice between launches and skips the output prompt on later cleans. Choose **Ask me each time** to bring the prompt back.
-- See which files were cleaned directly in the file list, including whether a new copy was saved or the original was updated.
-- A quieter heading and custom window bar keep the focus on your files. The gear icon opens Settings, and the window controls are at the top left.
-- File rows now use a red trash icon, action buttons use the new white arrow, and the macOS app icon has a soft blue background for contrast.
-- The file screen has a short description in place of numbered steps. The new remove-all icon reveals its label on hover or keyboard focus.
-- The rounded blue icon is also visible beside the app name and in the Dock during development runs.
-- Settings now has a cleaner output panel with simple **Save** and **Back** actions.
-- The file queue stays in place while you visit Settings, and saved output choices are applied when you clean files.
+- CleanSlate now checks GitHub Releases for a newer macOS version when it starts. If one is available, a notice in the file screen links to the release for a manual download and install.
+- Dismissing the notice hides it for the current app session. It appears again on the next full quit and launch if the newer release is still available. Closing and reopening the window in the same session keeps it hidden.
+
+The update notice begins with 0.1.3. Earlier versions cannot announce this release; install 0.1.3 manually to receive notices about future releases. The check contacts GitHub for release information, sends no media files, and does not interrupt cleaning when offline.
 
 CleanSlate removes metadata from images and videos locally. Download the DMG matching your Mac: `arm64` for Apple silicon or `x64` for Intel. Files are processed on your Mac with bundled FFmpeg and ExifTool, with SVG files cleaned directly; the app has no media upload or analytics feature. See the [README](https://github.com/alejordanze/cleanslate#readme) for usage and format limitations.
 
@@ -17,4 +11,4 @@ This release is **unsigned and not notarized**. We have not paid the [US$99/year
 
 Each DMG has a matching SHA-256 checksum file. After downloading the DMG and checksum file for your architecture, run `shasum -a 256 -c SHA256SUMS-arm64.txt` or `shasum -a 256 -c SHA256SUMS-x64.txt` in the download folder. A checksum confirms the DMG matches the listed file; it is not a substitute for code signing.
 
-For releases built while this repository is public, GitHub Actions also creates a build provenance attestation for each DMG. After installing the [GitHub CLI](https://cli.github.com/), verify your downloaded file with `gh attestation verify CleanSlate-0.1.2-arm64.dmg --repo alejordanze/cleanslate --signer-workflow alejordanze/cleanslate/.github/workflows/release.yml` (substitute your DMG filename). This verifies which workflow produced that exact file; it does not replace Apple signing or notarization.
+For releases built while this repository is public, GitHub Actions also creates a build provenance attestation for each DMG. After installing the [GitHub CLI](https://cli.github.com/), verify your downloaded file with `gh attestation verify CleanSlate-0.1.3-arm64.dmg --repo alejordanze/cleanslate --signer-workflow alejordanze/cleanslate/.github/workflows/release.yml` (substitute your DMG filename). This verifies which workflow produced that exact file; it does not replace Apple signing or notarization.

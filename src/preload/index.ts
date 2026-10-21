@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type { FfmpegCheckResult } from '../shared/ffmpeg';
 import type { MediaFile } from '../shared/media';
+import type { AvailableUpdate } from '../shared/update';
 import type {
   MetadataProcessRequest,
   MetadataProcessResponse,
@@ -11,6 +12,9 @@ const api = {
   inspectFfmpeg: () => ipcRenderer.invoke('ffmpeg:inspect') as Promise<FfmpegCheckResult>,
   getOutputPreference: () => ipcRenderer.invoke('preferences:get-output') as Promise<MetadataSaveMode | null>,
   saveOutputPreference: (mode: MetadataSaveMode | null) => ipcRenderer.invoke('preferences:save-output', mode) as Promise<void>,
+  checkForUpdates: () => ipcRenderer.invoke('updates:check') as Promise<AvailableUpdate | null>,
+  markUpdateNoticeShown: () => ipcRenderer.invoke('updates:shown') as Promise<void>,
+  openLatestRelease: () => ipcRenderer.invoke('updates:open-release') as Promise<void>,
   closeWindow: () => ipcRenderer.send('window:close'),
   minimizeWindow: () => ipcRenderer.send('window:minimize'),
   toggleMaximizeWindow: () => ipcRenderer.invoke('window:toggle-maximize') as Promise<boolean>,

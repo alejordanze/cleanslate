@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent } from 'electron';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -14,6 +14,8 @@ import {
 } from '../shared/media';
 import type { MetadataProcessRequest, MetadataSaveMode } from '../shared/metadata';
 import { readOutputPreference, writeOutputPreference } from './outputPreference';
+import { checkForUpdate, createUpdateSession } from './updateCheck';
+import type { AvailableUpdate } from '../shared/update';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,6 +29,7 @@ const rendererUrl = app.isPackaged
   ? ''
   : process.env.ELECTRON_RENDERER_URL ?? process.env.VITE_DEV_SERVER_URL ?? '';
 let mainWindow: BrowserWindow | null = null;
+const updateSession = createUpdateSession(() => checkForUpdate(app.getVersion()));
 
 function assertAppSender(event: IpcMainInvokeEvent): void {
   if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) {
@@ -86,6 +89,22 @@ ipcMain.handle('preferences:save-output', async (event, mode: MetadataSaveMode |
   assertAppSender(event);
   if (mode !== null && mode !== 'new' && mode !== 'replace') throw new Error('Choose a valid output setting.');
   await writeOutputPreference(join(app.getPath('userData'), 'preferences.json'), mode);
+});
+
+ipcMain.handle('updates:check', async (event): Promise<AvailableUpdate | null> => {
+  assertAppSender(event);
+  if (!app.isPackaged || process.platform !== 'darwin' || smokeUserData) return null;
+  return updateSession.check();
+});
+
+ipcMain.handle('updates:shown', (event): void => {
+  assertAppSender(event);
+  updateSession.markNoticeShown();
+});
+
+ipcMain.handle('updates:open-release', async (event): Promise<void> => {
+  assertAppSender(event);
+  await shell.openExternal('https://github.com/alejordanze/cleanslate/releases/latest');
 });
 
 ipcMain.on('window:close', (event) => {
@@ -243,6 +262,11 @@ app.whenReady().then(() => {
           const mode = await window.cleanslate.getOutputPreference();
           return mode === null || mode === 'new' || mode === 'replace';
         })()`);
+        const updateBridgeReady = await window.webContents.executeJavaScript(`(async () =>
+          typeof window.cleanslate.openLatestRelease === 'function' &&
+          await window.cleanslate.checkForUpdates() === null
+        )()`);
+        if (!updateBridgeReady) return fail('the update check bridge is unavailable in the packaged app');
         const ffmpeg = await inspectBundledFfmpeg();
         await inspectBundledExiftool();
 

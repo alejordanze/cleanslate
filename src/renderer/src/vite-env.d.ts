@@ -2,6 +2,7 @@
 
 import type { FfmpegCheckResult } from '../../shared/ffmpeg';
 import type { MediaFile } from '../../shared/media';
+import type { AvailableUpdate } from '../../shared/update';
 import type {
   MetadataProcessRequest,
   MetadataProcessResponse,
@@ -14,6 +15,9 @@ declare global {
       inspectFfmpeg: () => Promise<FfmpegCheckResult>;
       getOutputPreference: () => Promise<MetadataSaveMode | null>;
       saveOutputPreference: (mode: MetadataSaveMode | null) => Promise<void>;
+      checkForUpdates: () => Promise<AvailableUpdate | null>;
+      markUpdateNoticeShown: () => Promise<void>;
+      openLatestRelease: () => Promise<void>;
       closeWindow: () => void;
       minimizeWindow: () => void;
       toggleMaximizeWindow: () => Promise<boolean>;

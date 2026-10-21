@@ -6,6 +6,7 @@ import type {
 } from "../../shared/metadata";
 import cleanSlateMark from "../../../icons/clear-folder.svg";
 import { mergeMediaFiles, type MediaFile } from "../../shared/media";
+import type { AvailableUpdate } from "../../shared/update";
 import OutputDialog from "./components/OutputDialog";
 import Home from "./components/Home";
 import Preferences from "./components/Preferences";
@@ -23,6 +24,8 @@ function App() {
   const [preferenceLoading, setPreferenceLoading] = useState(true);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [message, setMessage] = useState<Notice | null>(null);
+  const [availableUpdate, setAvailableUpdate] = useState<AvailableUpdate | null>(null);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
   const [fileResults, setFileResults] = useState<
     Map<string, MetadataProcessResult>
   >(() => new Map());
@@ -55,6 +58,29 @@ function App() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const bridge = window.cleanslate;
+    if (!bridge?.checkForUpdates) return;
+
+    let active = true;
+    void bridge.checkForUpdates()
+      .then((update) => {
+        if (active) setAvailableUpdate(update);
+      })
+      .catch(() => {
+        // File cleaning remains available when the release check cannot connect.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!availableUpdate || view !== "files" || updateDismissed) return;
+    void window.cleanslate?.markUpdateNoticeShown().catch(() => undefined);
+  }, [availableUpdate, view, updateDismissed]);
 
   async function handleRemoveMetadata(
     mode: MetadataSaveMode,
@@ -140,6 +166,22 @@ function App() {
     setIsSaveDialogOpen(true);
   }
 
+  async function openUpdateRelease() {
+    try {
+      await window.cleanslate?.openLatestRelease();
+    } catch {
+      setMessage({
+        tone: "warning",
+        text: "Could not open GitHub Releases. Please try again.",
+      });
+    }
+  }
+
+  function dismissUpdate() {
+    setUpdateDismissed(true);
+    void window.cleanslate?.markUpdateNoticeShown().catch(() => undefined);
+  }
+
   return (
     <div className="window-root">
       <WindowBar view={view} onSettingsToggle={openSettings} />
@@ -151,6 +193,31 @@ function App() {
             <span className="brand-tag">media privacy</span>
           </div>
         </header>
+
+        {view === "files" && availableUpdate && !updateDismissed && (
+          <aside className="update-banner" role="status">
+            <div className="update-banner__copy">
+              <strong>CleanSlate {availableUpdate.version} is available</strong>
+              <span>Get the latest version from GitHub Releases.</span>
+            </div>
+            <button
+              className="update-banner__link"
+              type="button"
+              onClick={() => void openUpdateRelease()}
+            >
+              View release
+            </button>
+            <button
+              className="update-banner__dismiss"
+              type="button"
+              onClick={dismissUpdate}
+              aria-label="Dismiss update notice"
+              title="Dismiss"
+            >
+              ×
+            </button>
+          </aside>
+        )}
 
         {view === "files" ? (
           <Home
