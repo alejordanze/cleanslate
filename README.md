@@ -72,6 +72,10 @@ Use Node.js 22 or newer. Install dependencies with `npm ci`, then:
 
 `ffmpeg-static` downloads a platform-specific binary during dependency installation; ExifTool is also bundled. Install dependencies on the platform you are packaging for. The macOS app and development Dock icons are generated from `icons/clear-folder.svg` with `npm run icon:mac`.
 
+## Website
+
+The [website](website/README.md) lives in its own React/Vite package in this repository. Its home and download pages are pre-rendered for Firebase Hosting. The download page reads published GitHub Releases, so new desktop versions can appear without a website deployment. Website changes have a separate, path-filtered [deployment workflow](.github/workflows/deploy-website.yml).
+
 ## Release a version
 
 The [CI workflow](.github/workflows/ci.yml) runs on pushes to `main` and pull requests. Before the first automated release, configure GitHub:
