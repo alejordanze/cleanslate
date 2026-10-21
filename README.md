@@ -17,6 +17,17 @@ shasum -a 256 -c SHA256SUMS-x64.txt
 
 Use the command for your Mac's architecture. A matching checksum confirms the DMG matches the file listed on that release page; it does not replace code signing or notarization.
 
+### If macOS says CleanSlate is damaged
+
+This alert can appear when macOS checks the browser-downloaded, unsigned app. First verify the DMG checksum as described above, then drag `CleanSlate.app` from the DMG into Applications. If **Open Anyway** is unavailable or does not work, run these commands for that verified copy:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/CleanSlate.app
+open /Applications/CleanSlate.app
+```
+
+This removes the quarantine flag from CleanSlate only so you can test it locally. It does not sign or notarize the app. Do not use these commands if the checksum does not match.
+
 New releases built while this repository is public also have a GitHub build provenance attestation for each DMG. With the [GitHub CLI](https://cli.github.com/) installed, verify the downloaded file against the release workflow (replace the filename with the DMG you downloaded):
 
 ```sh
