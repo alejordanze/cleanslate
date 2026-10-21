@@ -10,8 +10,8 @@ import OutputDialog from "./components/OutputDialog";
 import Home from "./components/Home";
 import Preferences from "./components/Preferences";
 import { WindowBar } from "./components/WindowBar";
-import { getMetadataBridge } from "./bridge";
 import { loadOutputPreference, saveOutputPreference } from "./outputPreference";
+import { processingNotice, removeMetadata, updateFileSizes } from "./processing";
 import type { Notice } from "./types";
 
 function App() {
@@ -20,9 +20,6 @@ function App() {
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [view, setView] = useState<"files" | "settings">("files");
   const [savedMode, setSavedMode] = useState<MetadataSaveMode | null>(null);
-  const [draftMode, setDraftMode] = useState<MetadataSaveMode | null>(null);
-  const [saveMode, setSaveMode] = useState<MetadataSaveMode>("new");
-  const [rememberChoice, setRememberChoice] = useState(false);
   const [preferenceLoading, setPreferenceLoading] = useState(true);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [message, setMessage] = useState<Notice | null>(null);
@@ -42,7 +39,6 @@ function App() {
 
         if (active) {
           setSavedMode(mode);
-          setDraftMode(mode);
         }
       } catch {
         if (active)
@@ -77,7 +73,6 @@ function App() {
         try {
           await saveOutputPreference(mode);
           setSavedMode(mode);
-          setDraftMode(mode);
         } catch {
           setDialogError(
             "Could not remember your choice. Try again or uncheck the box to continue.",
@@ -87,55 +82,14 @@ function App() {
       }
 
       setFileResults(new Map());
-      const result = await getMetadataBridge().removeMetadata({
-        mode,
-        files: files.map(({ id, name, path, kind }) => ({
-          id,
-          name,
-          path,
-          kind,
-        })),
-      });
+      const result = await removeMetadata(files, mode);
 
       const resultById = new Map(
         result.results.map((fileResult) => [fileResult.id, fileResult]),
       );
       setFileResults(resultById);
-
-      setFiles((current) =>
-        current.map((file) => {
-          const fileResult = resultById.get(file.id);
-
-          return fileResult?.ok &&
-            fileResult.size !== null &&
-            fileResult.outputPath === file.path
-            ? { ...file, size: fileResult.size }
-            : file;
-        }),
-      );
-
-      if (result.failed === 0) {
-        setMessage({
-          tone: "success",
-          text:
-            mode === "new"
-              ? `Metadata removed from ${result.succeeded} file${result.succeeded === 1 ? "" : "s"}. Cleaned copies were saved beside the originals.`
-              : `Metadata removed from ${result.succeeded} file${result.succeeded === 1 ? "" : "s"}. The original files were updated.`,
-        });
-      } else {
-        const firstError = result.results.find(
-          (fileResult) => !fileResult.ok,
-        )?.error;
-        const summary =
-          result.succeeded > 0
-            ? `Cleaned ${result.succeeded} file${result.succeeded === 1 ? "" : "s"}. `
-            : "";
-        const detail =
-          result.failed === 1 && firstError
-            ? firstError
-            : `Could not process ${result.failed} files. Check that they open normally and try again.`;
-        setMessage({ tone: "warning", text: `${summary}${detail}` });
-      }
+      setFiles((current) => updateFileSizes(current, resultById));
+      setMessage(processingNotice(result));
 
       setIsSaveDialogOpen(false);
     } catch {
@@ -173,7 +127,6 @@ function App() {
       setView("files");
       return;
     }
-    setDraftMode(savedMode);
     setView("settings");
   }
 
@@ -183,8 +136,6 @@ function App() {
       void handleRemoveMetadata(savedMode);
       return;
     }
-    setSaveMode("new");
-    setRememberChoice(false);
     setDialogError(null);
     setIsSaveDialogOpen(true);
   }
@@ -217,25 +168,19 @@ function App() {
           />
         ) : (
           <Preferences
-            setSavedMode={setSavedMode}
             savedMode={savedMode}
-            draftMode={draftMode}
-            setDraftMode={setDraftMode}
             preferenceLoading={preferenceLoading}
-            openSettings={openSettings}
+            onSavedMode={setSavedMode}
+            onBack={openSettings}
           />
         )}
 
         {isSaveDialogOpen && (
           <OutputDialog
-            saveMode={saveMode}
-            setSaveMode={setSaveMode}
-            rememberChoice={rememberChoice}
-            setRememberChoice={setRememberChoice}
-            dialogError={dialogError}
-            setIsSaveDialogOpen={setIsSaveDialogOpen}
+            error={dialogError}
             isProcessing={isProcessing}
-            handleRemoveMetadata={handleRemoveMetadata}
+            onCancel={() => setIsSaveDialogOpen(false)}
+            onClean={handleRemoveMetadata}
           />
         )}
       </main>

@@ -1,34 +1,35 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { MetadataSaveMode } from "../../../shared/metadata";
 import { saveOutputPreference } from "../outputPreference";
 import type { Notice } from "../types";
 
 type PreferencesProps = {
-  setSavedMode: (mode: MetadataSaveMode | null) => void;
-  setDraftMode: (mode: MetadataSaveMode | null) => void;
   savedMode: MetadataSaveMode | null;
-  draftMode: MetadataSaveMode | null;
   preferenceLoading: boolean;
-  openSettings: () => void;
+  onSavedMode: (mode: MetadataSaveMode | null) => void;
+  onBack: () => void;
 };
 
 const Preferences = ({
-  setSavedMode,
   savedMode,
-  draftMode,
-  setDraftMode,
   preferenceLoading,
-  openSettings,
+  onSavedMode,
+  onBack,
 }: PreferencesProps) => {
+  const [draftMode, setDraftMode] = useState<MetadataSaveMode | null>(savedMode);
   const [settingsNotice, setSettingsNotice] = useState<Notice | null>(null);
   const [isSavingPreference, setIsSavingPreference] = useState(false);
+
+  useEffect(() => {
+    setDraftMode(savedMode);
+  }, [savedMode]);
 
   async function saveOutputSetting() {
     setIsSavingPreference(true);
     setSettingsNotice(null);
     try {
       await saveOutputPreference(draftMode);
-      setSavedMode(draftMode);
+      onSavedMode(draftMode);
       setSettingsNotice({
         tone: "success",
         text:
@@ -143,7 +144,7 @@ const Preferences = ({
           <button
             className="button button--secondary"
             type="button"
-            onClick={openSettings}
+            onClick={onBack}
             disabled={preferenceLoading || isSavingPreference}
           >
             Back

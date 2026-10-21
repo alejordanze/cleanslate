@@ -336,14 +336,18 @@ app.whenReady().then(() => {
           })()`);
           if (!removeAllBounds) return fail('the remove-all control is missing');
           window.webContents.sendInputEvent({ type: 'mouseMove', x: Math.round(removeAllBounds.x + 18), y: Math.round(removeAllBounds.y + removeAllBounds.height / 2) });
-          await new Promise((resolve) => setTimeout(resolve, 300));
-          const removeAllRevealed = await window.webContents.executeJavaScript(`(() => {
-            const button = document.querySelector('.remove-all-button');
-            const label = button?.querySelector('span');
-            return Boolean(button?.matches(':hover') && label &&
-              parseFloat(getComputedStyle(button).width) >= 118 &&
-              parseFloat(getComputedStyle(label).opacity) >= .95);
-          })()`);
+          let removeAllRevealed = false;
+          for (let attempt = 0; attempt < 40; attempt += 1) {
+            removeAllRevealed = await window.webContents.executeJavaScript(`(() => {
+              const button = document.querySelector('.remove-all-button');
+              const label = button?.querySelector('span');
+              return Boolean(button?.matches(':hover') && label &&
+                parseFloat(getComputedStyle(button).width) >= 118 &&
+                parseFloat(getComputedStyle(label).opacity) >= .95);
+            })()`);
+            if (removeAllRevealed) break;
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
           if (!removeAllRevealed) return fail('the remove-all label did not appear on hover');
         }
 

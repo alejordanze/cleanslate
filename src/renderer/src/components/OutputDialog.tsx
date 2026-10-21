@@ -1,30 +1,26 @@
+import { useState } from "react";
 import type { MetadataSaveMode } from "../../../shared/metadata";
 import rightArrowIcon from "../../../../icons/right-arrow.svg";
 
 type OutputDialogProps = {
-  saveMode: MetadataSaveMode;
-  setSaveMode: (mode: MetadataSaveMode) => void;
-  rememberChoice: boolean;
-  setRememberChoice: (remember: boolean) => void;
-  dialogError: string | null;
-  setIsSaveDialogOpen: (isOpen: boolean) => void;
+  error: string | null;
   isProcessing: boolean;
-  handleRemoveMetadata: (
+  onCancel: () => void;
+  onClean: (
     mode: MetadataSaveMode,
     rememberChoice: boolean,
   ) => Promise<void>;
 };
 
 const OutputDialog = ({
-  saveMode,
-  setSaveMode,
-  rememberChoice,
-  setRememberChoice,
-  dialogError,
-  setIsSaveDialogOpen,
+  error,
   isProcessing,
-  handleRemoveMetadata,
+  onCancel,
+  onClean,
 }: OutputDialogProps) => {
+  const [saveMode, setSaveMode] = useState<MetadataSaveMode>("new");
+  const [rememberChoice, setRememberChoice] = useState(false);
+
   return (
     <div className="modal-backdrop">
       <section
@@ -51,6 +47,7 @@ const OutputDialog = ({
               value="new"
               checked={saveMode === "new"}
               onChange={() => setSaveMode("new")}
+              disabled={isProcessing}
             />
             <span>
               <strong>Save new cleaned copies</strong>
@@ -70,6 +67,7 @@ const OutputDialog = ({
               value="replace"
               checked={saveMode === "replace"}
               onChange={() => setSaveMode("replace")}
+              disabled={isProcessing}
             />
             <span>
               <strong>Replace the original files</strong>
@@ -85,13 +83,14 @@ const OutputDialog = ({
             type="checkbox"
             checked={rememberChoice}
             onChange={(event) => setRememberChoice(event.target.checked)}
+            disabled={isProcessing}
           />
           Remember this choice for next time
         </label>
 
-        {dialogError && (
+        {error && (
           <p className="dialog-error" role="alert">
-            {dialogError}
+            {error}
           </p>
         )}
 
@@ -99,7 +98,7 @@ const OutputDialog = ({
           <button
             className="text-button"
             type="button"
-            onClick={() => setIsSaveDialogOpen(false)}
+            onClick={onCancel}
             disabled={isProcessing}
           >
             Cancel
@@ -107,7 +106,7 @@ const OutputDialog = ({
           <button
             className="button button--primary"
             type="button"
-            onClick={() => void handleRemoveMetadata(saveMode, rememberChoice)}
+            onClick={() => void onClean(saveMode, rememberChoice)}
             disabled={isProcessing}
           >
             {isProcessing ? "Cleaning..." : "Clean files"}
