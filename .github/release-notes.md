@@ -2,6 +2,7 @@
 
 - CleanSlate now checks GitHub Releases for a newer macOS version when it starts. If one is available, a notice in the file screen links to the release for a manual download and install.
 - Dismissing the notice hides it for the current app session. It appears again on the next full quit and launch if the newer release is still available. Closing and reopening the window in the same session keeps it hidden.
+- Fixed the output settings dialog layout by reducing the title size and letting the description use the available width.
 
 The update notice begins with 0.1.3. Earlier versions cannot announce this release; install 0.1.3 manually to receive notices about future releases. The check contacts GitHub for release information, sends no media files, and does not interrupt cleaning when offline.
 
