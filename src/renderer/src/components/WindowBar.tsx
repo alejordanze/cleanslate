@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import gearIcon from '../../../../icons/gear.svg';
-import { getBridge } from '../bridge';
+import { getBridge } from '../services/bridge';
 
 type WindowBarProps = {
   view: 'files' | 'settings';

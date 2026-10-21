@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { processingNotice, updateFileSizes } from '../src/renderer/src/processing';
+import { processingNotice, updateFileSizes } from '../src/renderer/src/services/processing';
 import { createMediaFile } from '../src/shared/media';
 import type { MetadataProcessResponse, MetadataProcessResult } from '../src/shared/metadata';
 

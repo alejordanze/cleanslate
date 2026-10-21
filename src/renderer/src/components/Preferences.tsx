@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { MetadataSaveMode } from "../../../shared/metadata";
-import { saveOutputPreference } from "../outputPreference";
+import { saveOutputPreference } from "../services/outputPreference";
 import type { Notice } from "../types";
 
 type PreferencesProps = {

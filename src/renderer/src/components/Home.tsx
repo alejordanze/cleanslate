@@ -1,8 +1,8 @@
 import { useState, type DragEvent } from "react";
 import { createMediaFile, type MediaFile } from "../../../shared/media";
 import type { MetadataProcessResult, MetadataSaveMode } from "../../../shared/metadata";
-import { FileRow } from "../FileRow";
-import { getBridge } from "../bridge";
+import { FileRow } from "./FileRow";
+import { getBridge } from "../services/bridge";
 import type { Notice } from "../types";
 import folderOpenIcon from "../../../../icons/open-folder.svg";
 import removeAllIcon from "../../../../icons/remove-all.svg";

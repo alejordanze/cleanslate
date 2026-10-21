@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { clearLegacyOutputMode, readLegacyOutputMode } from '../src/renderer/src/preferences';
+import { clearLegacyOutputMode, readLegacyOutputMode } from '../src/renderer/src/services/legacyOutputPreference';
 
 describe('legacy output preference', () => {
   it('reads only an explicitly remembered choice', () => {

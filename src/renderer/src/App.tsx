@@ -10,8 +10,8 @@ import OutputDialog from "./components/OutputDialog";
 import Home from "./components/Home";
 import Preferences from "./components/Preferences";
 import { WindowBar } from "./components/WindowBar";
-import { loadOutputPreference, saveOutputPreference } from "./outputPreference";
-import { processingNotice, removeMetadata, updateFileSizes } from "./processing";
+import { loadOutputPreference, saveOutputPreference } from "./services/outputPreference";
+import { processingNotice, removeMetadata, updateFileSizes } from "./services/processing";
 import type { Notice } from "./types";
 
 function App() {

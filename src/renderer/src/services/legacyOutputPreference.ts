@@ -1,4 +1,4 @@
-import type { MetadataSaveMode } from '../../shared/metadata';
+import type { MetadataSaveMode } from '../../../shared/metadata';
 
 const outputModeKey = 'cleanslate.output-mode';
 

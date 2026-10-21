@@ -1,11 +1,11 @@
-import type { MediaFile } from '../../shared/media';
+import type { MediaFile } from '../../../shared/media';
 import type {
   MetadataProcessResponse,
   MetadataProcessResult,
   MetadataSaveMode,
-} from '../../shared/metadata';
+} from '../../../shared/metadata';
 import { getMetadataBridge } from './bridge';
-import type { Notice } from './types';
+import type { Notice } from '../types';
 
 export function removeMetadata(files: MediaFile[], mode: MetadataSaveMode): Promise<MetadataProcessResponse> {
   return getMetadataBridge().removeMetadata({

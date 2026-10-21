@@ -1,6 +1,6 @@
-import type { MetadataSaveMode } from '../../shared/metadata';
+import type { MetadataSaveMode } from '../../../shared/metadata';
 import { getBridge } from './bridge';
-import { clearLegacyOutputMode, readLegacyOutputMode } from './preferences';
+import { clearLegacyOutputMode, readLegacyOutputMode } from './legacyOutputPreference';
 
 export async function loadOutputPreference(): Promise<MetadataSaveMode | null> {
   let mode = await getBridge().getOutputPreference();

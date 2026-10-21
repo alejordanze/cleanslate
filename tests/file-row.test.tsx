@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { FileRow } from '../src/renderer/src/FileRow';
+import { FileRow } from '../src/renderer/src/components/FileRow';
 import type { MetadataProcessResult } from '../src/shared/metadata';
 import { createMediaFile } from '../src/shared/media';
 

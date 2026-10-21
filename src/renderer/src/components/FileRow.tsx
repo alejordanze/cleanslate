@@ -1,6 +1,6 @@
-import type { MetadataProcessResult } from '../../shared/metadata';
-import { formatFileSize, getFileStem, type MediaFile } from '../../shared/media';
-import trashIcon from '../../../icons/trash.svg';
+import type { MetadataProcessResult } from '../../../shared/metadata';
+import { formatFileSize, getFileStem, type MediaFile } from '../../../shared/media';
+import trashIcon from '../../../../icons/trash.svg';
 
 interface FileRowProps {
   file: MediaFile;
