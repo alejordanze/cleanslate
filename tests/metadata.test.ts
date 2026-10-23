@@ -8,20 +8,24 @@ import { dialog } from 'electron';
 import { runFfmpeg } from '../src/shared/ffmpeg';
 import { runExiftool } from '../src/shared/exiftool';
 import { removeMetadata } from '../src/main/metadata';
+import { inspectMetadata } from '../src/main/metadataInspection';
 import { supportedImageExtensions, supportedVideoExtensions } from '../src/shared/media';
 import { createMediaFile } from '../src/shared/media';
 
 vi.mock('electron', () => ({ dialog: { showMessageBox: vi.fn() } }));
 vi.mock('../src/shared/ffmpeg', () => ({ runFfmpeg: vi.fn() }));
 vi.mock('../src/shared/exiftool', () => ({ runExiftool: vi.fn() }));
+vi.mock('../src/main/metadataInspection', () => ({ inspectMetadata: vi.fn() }));
 
 const ffmpeg = vi.mocked(runFfmpeg);
 const exiftool = vi.mocked(runExiftool);
+const inspect = vi.mocked(inspectMetadata);
 const showMessageBox = vi.mocked(dialog.showMessageBox);
 let testDirectory: string;
 
 beforeEach(async () => {
   vi.resetAllMocks();
+  inspect.mockResolvedValue({ fields: [], error: null });
   testDirectory = await mkdtemp(join(tmpdir(), 'cleanslate-metadata-'));
 });
 
@@ -86,6 +90,10 @@ describe('metadata removal', () => {
     const input = join(testDirectory, 'clip.mp4');
     await writeFile(input, 'original data');
     successfulFfmpeg();
+    inspect.mockImplementation(async (path) => ({
+      fields: [{ key: 'QuickTime:Comment', group: 'QuickTime', label: 'Comment', value: await readFile(path, 'utf8') }],
+      error: null
+    }));
 
     const result = await removeMetadata({ mode: 'replace', files: [
       { id: 'clip', name: 'clip.mp4', path: input, kind: 'video' }
@@ -93,6 +101,8 @@ describe('metadata removal', () => {
 
     expect(result.results[0]).toMatchObject({ ok: true, outputPath: input, size: 12 });
     expect(await readFile(input, 'utf8')).toBe('cleaned data');
+    expect(result.results[0].metadata?.before.fields[0].value).toBe('original data');
+    expect(result.results[0].metadata?.after.fields[0].value).toBe('cleaned data');
     const args = ffmpeg.mock.calls[0][0];
     expect(args).toContain('0:v?');
     expect(args).toContain('0:a?');

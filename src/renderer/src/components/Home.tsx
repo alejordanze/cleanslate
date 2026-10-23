@@ -1,6 +1,6 @@
 import { useState, type DragEvent } from "react";
 import { createMediaFile, type MediaFile } from "../../../shared/media";
-import type { MetadataProcessResult, MetadataSaveMode } from "../../../shared/metadata";
+import type { MetadataComparison, MetadataProcessResult, MetadataSaveMode } from "../../../shared/metadata";
 import { FileRow } from "./FileRow";
 import { getBridge } from "../services/bridge";
 import type { Notice } from "../types";
@@ -20,6 +20,7 @@ type HomeProps = {
   onAddFiles: (files: MediaFile[]) => void;
   onRemoveFile: (id: string) => void;
   onClearFiles: () => void;
+  onOpenMetadata: (file: MediaFile, comparison: MetadataComparison | null) => void;
 };
 const Home = ({
   files,
@@ -32,6 +33,7 @@ const Home = ({
   onAddFiles,
   onRemoveFile,
   onClearFiles,
+  onOpenMetadata,
   message,
 }: HomeProps) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -167,6 +169,7 @@ const Home = ({
                   file={file}
                   result={fileResults.get(file.id)}
                   onRemove={onRemoveFile}
+                  onOpenMetadata={onOpenMetadata}
                 />
               ))}
             </div>

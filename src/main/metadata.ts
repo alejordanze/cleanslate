@@ -7,6 +7,7 @@ import { dialog, type BrowserWindow } from 'electron';
 import { runFfmpeg } from '../shared/ffmpeg';
 import { runExiftool } from '../shared/exiftool';
 import { cleanSvg } from './svg';
+import { inspectMetadata } from './metadataInspection';
 import type {
   MetadataProcessRequest,
   MetadataProcessResponse,
@@ -157,10 +158,12 @@ async function processOne(
         outputPath: null,
         size: null,
         ok: false,
-        error: `Skipped ${basename(outputPath)}.`
+        error: `Skipped ${basename(outputPath)}.`,
+        metadata: null
       };
     }
 
+    const before = await inspectMetadata(target.path);
     tempPath = temporaryPath(outputPath);
     stage = 'process';
     if (target.kind === 'image' && extname(target.path).toLowerCase() === '.svg') {
@@ -183,6 +186,7 @@ async function processOne(
     tempPath = null;
 
     const outputStats = await stat(outputPath);
+    const after = await inspectMetadata(outputPath);
 
     return {
       id: target.id,
@@ -190,7 +194,8 @@ async function processOne(
       outputPath,
       size: outputStats.size,
       ok: true,
-      error: null
+      error: null,
+      metadata: { before, after }
     };
   } catch (error) {
     return {
@@ -199,7 +204,8 @@ async function processOne(
       outputPath,
       size: null,
       ok: false,
-      error: friendlyError(error, target, stage)
+      error: friendlyError(error, target, stage),
+      metadata: null
     };
   } finally {
     if (tempPath) {

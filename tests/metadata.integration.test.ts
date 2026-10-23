@@ -48,6 +48,11 @@ describe('real metadata removal', () => {
     ] }, null);
 
     expect(result.results[0]).toMatchObject({ ok: true, error: null });
+    const comparison = result.results[0].metadata!;
+    expect(comparison.before.error).toBeNull();
+    expect(comparison.after.error).toBeNull();
+    expect(comparison.before.fields.some((field) => field.key.endsWith(`:${tag}`) && field.value === 'CleanSlateFixture')).toBe(true);
+    expect(comparison.after.fields.some((field) => field.key.endsWith(`:${tag}`))).toBe(false);
     const cleaned = result.results[0].outputPath!;
     expect((await tags(cleaned)).FileType).toBe(fileType);
     expect((await tags(cleaned))[tag]).toBeUndefined();
@@ -65,6 +70,8 @@ describe('real metadata removal', () => {
     ] }, null);
 
     expect(result.results[0]).toMatchObject({ ok: true, outputPath: input });
+    expect(result.results[0].metadata?.before.fields.some((field) => field.key.endsWith(':Artist') && field.value === 'CleanSlateFixture')).toBe(true);
+    expect(result.results[0].metadata?.after.fields.some((field) => field.key.endsWith(':Artist'))).toBe(false);
     expect((await tags(input)).FileType).toBe('HEIC');
     expect((await tags(input)).Artist).toBeUndefined();
   }, 15_000);

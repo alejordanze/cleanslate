@@ -6,13 +6,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectBundledFfmpeg } from '../shared/ffmpeg';
 import { removeMetadata } from './metadata';
+import { inspectMetadata } from './metadataInspection';
 import { inspectBundledExiftool } from '../shared/exiftool';
 import {
   createMediaFile,
   supportedMediaExtensions,
   type MediaFile
 } from '../shared/media';
-import type { MetadataProcessRequest, MetadataSaveMode } from '../shared/metadata';
+import type { MetadataProcessRequest, MetadataSaveMode, MetadataSnapshot } from '../shared/metadata';
 import { readOutputPreference, writeOutputPreference } from './outputPreference';
 import { checkForUpdate, createUpdateSession } from './updateCheck';
 import type { AvailableUpdate } from '../shared/update';
@@ -141,6 +142,11 @@ ipcMain.handle('metadata:remove', async (event, request: MetadataProcessRequest)
   }
 
   return removeMetadata(request, mainWindow);
+});
+
+ipcMain.handle('metadata:inspect', async (event, filePath: string): Promise<MetadataSnapshot> => {
+  assertAppSender(event);
+  return inspectMetadata(typeof filePath === 'string' ? filePath : '');
 });
 
 ipcMain.handle('media:pick', async (event): Promise<MediaFile[]> => {

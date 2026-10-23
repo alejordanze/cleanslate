@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type {
+  MetadataComparison,
   MetadataProcessResult,
   MetadataSaveMode,
 } from "../../shared/metadata";
@@ -8,6 +9,7 @@ import cleanSlateMark from "../../../icons/clear-folder.svg";
 import { mergeMediaFiles, type MediaFile } from "../../shared/media";
 import type { AvailableUpdate } from "../../shared/update";
 import OutputDialog from "./components/OutputDialog";
+import MetadataDialog from "./components/MetadataDialog";
 import Home from "./components/Home";
 import Preferences from "./components/Preferences";
 import { WindowBar } from "./components/WindowBar";
@@ -19,6 +21,7 @@ function App() {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [metadataDialog, setMetadataDialog] = useState<{ file: MediaFile; comparison: MetadataComparison | null } | null>(null);
   const [view, setView] = useState<"files" | "settings">("files");
   const [savedMode, setSavedMode] = useState<MetadataSaveMode | null>(null);
   const [preferenceLoading, setPreferenceLoading] = useState(true);
@@ -135,6 +138,7 @@ function App() {
   }
 
   function removeFile(id: string) {
+    if (metadataDialog?.file.id === id) setMetadataDialog(null);
     setFiles((current) => current.filter((file) => file.id !== id));
     setFileResults((current) => {
       const next = new Map(current);
@@ -144,6 +148,7 @@ function App() {
   }
 
   function clearFiles() {
+    setMetadataDialog(null);
     setFiles([]);
     setFileResults(new Map());
   }
@@ -232,6 +237,7 @@ function App() {
             onAddFiles={addFiles}
             onRemoveFile={removeFile}
             onClearFiles={clearFiles}
+            onOpenMetadata={(file, comparison) => setMetadataDialog({ file, comparison })}
           />
         ) : (
           <Preferences
@@ -250,6 +256,11 @@ function App() {
             onClean={handleRemoveMetadata}
           />
         )}
+        {metadataDialog && <MetadataDialog
+          file={metadataDialog.file}
+          comparison={metadataDialog.comparison}
+          onClose={() => setMetadataDialog(null)}
+        />}
       </main>
     </div>
   );

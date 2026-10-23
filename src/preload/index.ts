@@ -5,7 +5,8 @@ import type { AvailableUpdate } from '../shared/update';
 import type {
   MetadataProcessRequest,
   MetadataProcessResponse,
-  MetadataSaveMode
+  MetadataSaveMode,
+  MetadataSnapshot
 } from '../shared/metadata';
 
 const api = {
@@ -26,6 +27,7 @@ const api = {
   },
   pickMediaFiles: () => ipcRenderer.invoke('media:pick') as Promise<MediaFile[]>,
   removeMetadata: (request: MetadataProcessRequest) => ipcRenderer.invoke('metadata:remove', request) as Promise<MetadataProcessResponse>,
+  inspectMetadata: (filePath: string) => ipcRenderer.invoke('metadata:inspect', filePath) as Promise<MetadataSnapshot>,
   getPathForFile: (file: File) => webUtils.getPathForFile(file)
 };
 

@@ -18,6 +18,7 @@ function result(overrides: Partial<MetadataProcessResult>): MetadataProcessResul
     size: null,
     ok: false,
     error: null,
+    metadata: null,
     ...overrides,
   };
 }

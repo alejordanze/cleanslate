@@ -2,6 +2,23 @@ import type { MediaKind } from './media';
 
 export type MetadataSaveMode = 'replace' | 'new';
 
+export interface MetadataField {
+  key: string;
+  group: string;
+  label: string;
+  value: string;
+}
+
+export interface MetadataSnapshot {
+  fields: MetadataField[];
+  error: string | null;
+}
+
+export interface MetadataComparison {
+  before: MetadataSnapshot;
+  after: MetadataSnapshot;
+}
+
 export interface MetadataProcessTarget {
   id: string;
   name: string;
@@ -21,6 +38,7 @@ export interface MetadataProcessResult {
   size: number | null;
   ok: boolean;
   error: string | null;
+  metadata: MetadataComparison | null;
 }
 
 export interface MetadataProcessResponse {

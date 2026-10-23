@@ -13,7 +13,7 @@ const file = createMediaFile({
 })!;
 
 function render(result?: MetadataProcessResult): string {
-  return renderToStaticMarkup(<FileRow file={file} result={result} onRemove={vi.fn()} />);
+  return renderToStaticMarkup(<FileRow file={file} result={result} onRemove={vi.fn()} onOpenMetadata={vi.fn()} />);
 }
 
 function result(overrides: Partial<MetadataProcessResult>): MetadataProcessResult {
@@ -24,6 +24,7 @@ function result(overrides: Partial<MetadataProcessResult>): MetadataProcessResul
     size: null,
     ok: false,
     error: null,
+    metadata: null,
     ...overrides
   };
 }
@@ -31,6 +32,8 @@ function result(overrides: Partial<MetadataProcessResult>): MetadataProcessResul
 describe('file row result', () => {
   it('shows no result before cleaning', () => {
     expect(render()).not.toContain('file-result');
+    expect(render()).toContain('View metadata for portrait.svg');
+    expect(render()).not.toContain('Compare metadata for portrait.svg');
   });
 
   it('uses the trash icon for the accessible remove control', () => {
@@ -42,10 +45,13 @@ describe('file row result', () => {
   });
 
   it('shows a green cleaned-copy result beside the source file', () => {
-    const html = render(result({ ok: true, outputPath: '/photos/portrait_cleaned.svg', size: 120 }));
+    const html = render(result({ ok: true, outputPath: '/photos/portrait_cleaned.svg', size: 120, metadata: {
+      before: { fields: [], error: null }, after: { fields: [], error: null }
+    } }));
     expect(html).toContain('file-result--success');
     expect(html).toContain('Cleaned copy saved');
     expect(html).toContain('portrait');
+    expect(html).toContain('Compare metadata for portrait.svg');
   });
 
   it('shows when the original was cleaned in place', () => {

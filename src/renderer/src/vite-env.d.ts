@@ -6,7 +6,8 @@ import type { AvailableUpdate } from '../../shared/update';
 import type {
   MetadataProcessRequest,
   MetadataProcessResponse,
-  MetadataSaveMode
+  MetadataSaveMode,
+  MetadataSnapshot
 } from '../../shared/metadata';
 
 declare global {
@@ -25,6 +26,7 @@ declare global {
       onWindowMaximized: (callback: (maximized: boolean) => void) => () => void;
       pickMediaFiles: () => Promise<MediaFile[]>;
       removeMetadata: (request: MetadataProcessRequest) => Promise<MetadataProcessResponse>;
+      inspectMetadata: (filePath: string) => Promise<MetadataSnapshot>;
       getPathForFile: (file: File) => string;
     };
   }
