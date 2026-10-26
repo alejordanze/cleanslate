@@ -33,10 +33,12 @@ function fieldsFromExiftool(data: Record<string, unknown>): MetadataField[] {
     const separator = key.indexOf(':');
     if (separator < 0) return [];
     const group = key.slice(0, separator);
-    const tag = key.slice(separator + 1);
+    const location = key.slice(separator + 1);
+    const copy = location.match(/^Copy(\d+):/);
+    const tag = location.replace(/^Copy\d+:/, '');
     if (excludedGroups.has(group) || (group === 'File' && excludedFileTags.has(tag))) return [];
 
-    return [{ key, group, label: fieldLabel(tag), value: fieldValue(value) }];
+    return [{ key, group, label: `${fieldLabel(tag)}${copy ? ` (copy ${copy[1]})` : ''}`, value: fieldValue(value) }];
   }).sort((a, b) => a.group.localeCompare(b.group) || a.label.localeCompare(b.label));
 }
 
@@ -46,7 +48,7 @@ export async function inspectMetadata(filePath: string): Promise<MetadataSnapsho
 
   try {
     const binary = await exiftoolPath();
-    const { stdout } = await execFileAsync(binary, ['-json', '-G1', '-s', filePath], {
+    const { stdout } = await execFileAsync(binary, ['-json', '-a', '-G1:4', '-s', filePath], {
       maxBuffer: 8 * 1024 * 1024,
       windowsHide: true
     });
