@@ -82,6 +82,7 @@ describe('metadata removal', () => {
     const args = ffmpeg.mock.calls[0][0];
     expect(args).toContain('-map_metadata');
     expect(args).toContain('-map_chapters');
+    expect(args).toContain('-bitexact');
     expect(args).toContain('0:v:0');
     expect(args).not.toContain('copy');
   });

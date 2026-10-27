@@ -86,6 +86,7 @@ function ffmpegArgs(target: MetadataProcessTarget, outputPath: string): string[]
     target.path,
     ...streamArgs,
     ...metadataArgs,
+    '-bitexact',
     outputPath
   ];
 }

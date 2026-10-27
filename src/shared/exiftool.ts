@@ -4,11 +4,14 @@ import { exiftoolPath } from 'exiftool-vendored';
 /** Remove writable metadata in place from an already copied image. */
 export async function runExiftool(filePath: string): Promise<void> {
   const binary = await exiftoolPath();
+  const cameraRaw = !/\.(?:heic|heif)$/i.test(filePath);
 
   await new Promise<void>((resolve, reject) => {
-    // RAW files keep structural IFD blocks; clear optional tags in those blocks explicitly.
+    // RAW files keep structural IFD blocks; camera identity may be needed to interpret maker notes.
     const child = spawn(binary, [
       '-all=',
+      '-CommonIFD0=',
+      ...(cameraRaw ? ['--IFD0:Make', '--IFD0:Model'] : []),
       '-Artist=',
       '-Copyright=',
       '-ImageDescription=',
@@ -17,7 +20,7 @@ export async function runExiftool(filePath: string): Promise<void> {
       '-DateTime=',
       '-HostComputer=',
       '-DocumentName=',
-      '-CameraOwnerName=',
+      '-OwnerName=',
       '-BodySerialNumber=',
       '-LensSerialNumber=',
       '-overwrite_original',
