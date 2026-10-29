@@ -36,4 +36,28 @@ describe('metadata dialog', () => {
     expect(html).toContain('metadata-status--kept');
     expect(html).toContain('Alice');
   });
+
+  it('puts useful changes first and keeps every field in More info', () => {
+    const fields = [
+      { key: 'EXIF:AlphaTechnical', group: 'EXIF', label: 'Alpha Technical', value: 'technical' },
+      { key: 'EXIF:Artist', group: 'EXIF', label: 'Artist', value: 'Alice' },
+      { key: 'EXIF:DateTimeOriginal', group: 'EXIF', label: 'Date Time Original', value: '2024:01:02' },
+      { key: 'EXIF:Comment', group: 'EXIF', label: 'Comment', value: 'private note' },
+      { key: 'GPS:GPSLatitude', group: 'GPS', label: 'GPS Latitude', value: '16.5 S' },
+      { key: 'EXIF:Orientation', group: 'EXIF', label: 'Orientation', value: '1' }
+    ];
+    const html = renderToStaticMarkup(<MetadataDialog file={file} comparison={{
+      before: { fields, error: null },
+      after: { fields: [fields[5]], error: null }
+    }} onClose={vi.fn()} />);
+    const [highlights, details] = html.split('<details');
+
+    expect(highlights).toContain('Key changes');
+    expect(highlights.indexOf('GPS Latitude')).toBeLessThan(highlights.indexOf('Artist'));
+    expect(highlights).not.toContain('Alpha Technical');
+    expect(html).toContain('<summary>More info');
+    expect(details).toContain('Alpha Technical');
+    expect(details).toContain('Orientation');
+  });
+
 });
