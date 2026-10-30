@@ -188,6 +188,8 @@ export default function MetadataDialog({ file, comparison, onClose }: MetadataDi
     fieldPriority(a) - fieldPriority(b)
   ).slice(0, 4) : [];
   const hasFields = rows ? rows.length > 0 : !comparison && !!snapshot && !snapshot.error && fieldCount > 0;
+  const format = file.extension.toUpperCase() || file.kind;
+  const cameraRaw = /^(?:arw|cr2|cr3|dng|nef|orf|raf|raw|rw2|sr2)$/.test(file.extension);
 
   return <div className="modal-backdrop">
     <section className="metadata-dialog" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="metadata-dialog-title" aria-describedby="metadata-dialog-note">
@@ -256,7 +258,17 @@ export default function MetadataDialog({ file, comparison, onClose }: MetadataDi
           </div>
           : snapshot ? <SnapshotFields snapshot={snapshot} query={normalizedSearch} /> : <p className="metadata-empty" role="status">Reading metadata…</p>}
       </div>}
-      <p className="metadata-dialog__note" id="metadata-dialog-note">Finder and filesystem details are not shown.</p>
+      <p className={`metadata-dialog__note${comparison ? ' metadata-dialog__note--retained' : ''}`} id="metadata-dialog-note">
+        {comparison ? <>
+          <strong>Why some {format} fields remain:</strong>{' '}
+          {file.kind === 'video' ? 'Container, track, and codec details help it play in its original format. Hidden data inside copied video streams may also remain.'
+            : cameraRaw ? 'Image structure and sometimes camera make and model help RAW software render it.'
+              : file.extension === 'heic' || file.extension === 'heif' ? 'Image container, codec, and color details help it open correctly.'
+                : file.extension === 'svg' ? 'Drawing and geometry are needed to display the image.'
+                  : 'Image dimensions, encoding, and color details help it display correctly.'}
+          {' '}Finder and filesystem details are not shown.
+        </> : 'Finder and filesystem details are not shown.'}
+      </p>
     </section>
   </div>;
 }

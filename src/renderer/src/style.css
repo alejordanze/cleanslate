@@ -1240,6 +1240,13 @@ h2 {
   font-size: 0.72rem;
   line-height: 1.45;
 }
+.metadata-dialog__note--retained {
+  padding: 8px 10px;
+  border-left: 3px solid #91bcfa;
+  color: #4c5b70;
+  background: #f5f9ff;
+}
+.metadata-dialog__note--retained strong { color: var(--ink); }
 @keyframes appear {
   from {
     opacity: 0;

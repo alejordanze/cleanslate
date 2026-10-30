@@ -60,4 +60,22 @@ describe('metadata dialog', () => {
     expect(details).toContain('Orientation');
   });
 
+  it('warns that video stream data is outside the comparison', () => {
+    const video = createMediaFile({ name: 'clip.mp4', path: '/videos/clip.mp4', size: 128, source: 'picker' })!;
+    const html = renderToStaticMarkup(<MetadataDialog file={video} comparison={comparison} onClose={vi.fn()} />);
+    expect(html).toContain('Why some MP4 fields remain');
+    expect(html).toContain('Hidden data inside copied video streams may also remain');
+  });
+
+  it.each([
+    ['photo.dng', 'camera make and model help RAW software render it'],
+    ['photo.heic', 'container, codec, and color details help it open correctly'],
+    ['drawing.svg', 'Drawing and geometry are needed to display the image'],
+    ['photo.png', 'dimensions, encoding, and color details help it display correctly']
+  ])('explains retained fields for %s', (name, reason) => {
+    const sample = createMediaFile({ name, path: `/photos/${name}`, size: 128, source: 'picker' })!;
+    const html = renderToStaticMarkup(<MetadataDialog file={sample} comparison={comparison} onClose={vi.fn()} />);
+    expect(html).toContain(`Why some ${sample.extension.toUpperCase()} fields remain`);
+    expect(html).toContain(reason);
+  });
 });
