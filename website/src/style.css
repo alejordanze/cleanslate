@@ -100,6 +100,7 @@ main { flex: 1; }
 .release-stamp .stamp-dot { width: 6px; height: 6px; box-shadow: none; }
 .stamp-divider { width: 1px; height: 14px; margin-inline: 4px; background: #aeb8c6; }
 .download-grid { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-top: -66px; }
+.download-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .download-card { display: flex; flex-direction: column; min-height: 298px; padding: 29px; border: 1px solid #dfe5ee; border-radius: var(--radius); background: white; box-shadow: 0 18px 45px rgba(31,45,71,.075); }
 .chip { align-self: flex-start; padding: 6px 9px; border-radius: 4px; color: var(--blue); background: #eaf2ff; font-size: 10px; font-weight: 800; letter-spacing: .13em; }
 .download-card-top { flex: 1; margin-top: 27px; }
@@ -111,6 +112,7 @@ main { flex: 1; }
 .download-card-meta a:hover { text-decoration: underline; }
 
 .install-section { padding-block: 104px 96px; }
+.install-section--windows { padding-top: 0; }
 .install-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 25px; margin: 42px 0 34px; padding: 0; list-style: none; }
 .install-steps li { display: flex; align-items: flex-start; gap: 15px; }
 .install-steps span { display: grid; flex: 0 0 31px; width: 31px; height: 31px; place-items: center; border: 1px solid #ccdaf0; border-radius: 50%; color: var(--blue); background: white; font-size: 12px; font-weight: 800; }
@@ -172,6 +174,7 @@ main { flex: 1; }
   .hero-grid { gap: 34px; }
   .hero h1 { font-size: clamp(43px, 5vw, 57px); }
   .steps-layout { gap: 55px; }
+  .download-grid--three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
@@ -190,6 +193,7 @@ main { flex: 1; }
   .final-cta { padding-block: 72px; }
   .download-hero { padding-block: 70px 99px; }
   .download-grid { gap: 15px; }
+  .download-grid--three { grid-template-columns: 1fr; }
   .download-card { padding: 22px; }
   .install-steps { gap: 18px; }
   .footer-inner { gap: 30px; }

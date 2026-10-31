@@ -27,7 +27,7 @@ const releases = response
     url: item.html_url,
     notes: item.body ?? '',
     assets: item.assets
-      .filter((asset) => /^(CleanSlate-.*\.(?:dmg)|SHA256SUMS-.*\.txt)$/.test(asset.name))
+      .filter((asset) => /^(CleanSlate-.*\.(?:dmg|exe)|SHA256SUMS-.*\.txt)$/.test(asset.name))
       .map((asset) => ({ name: asset.name, url: asset.browser_download_url }))
   }))
   .sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));

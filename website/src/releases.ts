@@ -3,6 +3,8 @@ export interface ReleaseAsset {
   url: string;
 }
 
+export type DownloadTarget = 'mac-arm64' | 'mac-x64' | 'win-x64';
+
 export interface Release {
   version: string;
   publishedAt: string;
@@ -43,7 +45,7 @@ export function parseReleases(value: unknown): Release[] {
         if (!rawAsset || typeof rawAsset !== 'object') return [];
         const asset = rawAsset as GitHubAsset;
         if (typeof asset.name !== 'string' || typeof asset.browser_download_url !== 'string' ||
-          !/^(CleanSlate-.*\.dmg|SHA256SUMS-.*\.txt)$/.test(asset.name)) return [];
+          !/^(CleanSlate-.*\.(?:dmg|exe)|SHA256SUMS-.*\.txt)$/.test(asset.name)) return [];
         return [{ name: asset.name, url: asset.browser_download_url }];
       })
       : [];
@@ -58,10 +60,12 @@ export function parseReleases(value: unknown): Release[] {
   }).sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
 }
 
-export function getAsset(release: Release, architecture: 'arm64' | 'x64') {
-  return release.assets.find((asset) => asset.name === `CleanSlate-${release.version}-${architecture}.dmg`);
+export function getAsset(release: Release, target: DownloadTarget) {
+  const suffix = target === 'win-x64' ? 'win-x64.exe' : `${target.slice(4)}.dmg`;
+  return release.assets.find((asset) => asset.name === `CleanSlate-${release.version}-${suffix}`);
 }
 
-export function getChecksum(release: Release, architecture: 'arm64' | 'x64') {
-  return release.assets.find((asset) => asset.name === `SHA256SUMS-${architecture}.txt`);
+export function getChecksum(release: Release, target: DownloadTarget) {
+  const suffix = target === 'win-x64' ? target : target.slice(4);
+  return release.assets.find((asset) => asset.name === `SHA256SUMS-${suffix}.txt`);
 }

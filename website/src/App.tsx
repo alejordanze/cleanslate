@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { getAsset, getChecksum, parseReleases, releasesApi, type Release } from './releases';
+import { getAsset, getChecksum, parseReleases, releasesApi, type DownloadTarget, type Release } from './releases';
 
 interface AppProps {
   pathname: string;
@@ -41,7 +41,7 @@ function Footer() {
         <div><span className="footer-label">Creator</span><span>Built by Alejandro Jordan</span><a href="https://www.linkedin.com/in/alejordanze" target="_blank" rel="noopener noreferrer">LinkedIn ↗</a><a href="https://github.com/alejordanze" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div>
       </div>
     </div>
-    <div className="shell footer-bottom"><span>© {new Date().getUTCFullYear()} CleanSlate</span><span>Files stay on your Mac.</span></div>
+    <div className="shell footer-bottom"><span>© {new Date().getUTCFullYear()} CleanSlate</span><span>Files stay on your computer.</span></div>
   </footer>;
 }
 
@@ -52,9 +52,9 @@ function HomePage() {
         <div className="hero-copy">
           <span className="eyebrow"><span className="eyebrow-dot" />A simpler way to share</span>
           <h1>Share the file.<br /><span>Keep the details.</span></h1>
-          <p>Photos and videos can carry information you never meant to post. CleanSlate removes embedded metadata before you share, right on your Mac.</p>
+          <p>Photos and videos can carry information you never meant to post. CleanSlate removes embedded metadata before you share, right on your computer.</p>
           <div className="hero-actions">
-            <a className="button button-primary" href="/download/">Download for macOS <ArrowIcon /></a>
+            <a className="button button-primary" href="/download/">Download CleanSlate <ArrowIcon /></a>
             <a className="text-link" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
           </div>
           <div className="hero-caption"><span className="caption-line" />No account. No media upload. Just cleaner files.</div>
@@ -68,9 +68,9 @@ function HomePage() {
     </section>
 
     <section className="why-section shell" aria-labelledby="why-title">
-      <div className="section-heading"><span className="section-kicker">WHY CLEANSLATE</span><h2 id="why-title">A quiet step before you post.</h2><p>Metadata can describe where, when, and how media was created. CleanSlate gives you a straightforward way to remove what supported formats allow before a file leaves your Mac.</p></div>
+      <div className="section-heading"><span className="section-kicker">WHY CLEANSLATE</span><h2 id="why-title">A quiet step before you post.</h2><p>Metadata can describe where, when, and how media was created. CleanSlate gives you a straightforward way to remove what supported formats allow before a file leaves your computer.</p></div>
       <div className="feature-grid">
-        <article className="feature"><span className="feature-number">01</span><h3>Local by design</h3><p>Files are processed on your Mac. CleanSlate has no account or media upload.</p></article>
+        <article className="feature"><span className="feature-number">01</span><h3>Local by design</h3><p>Files are processed on your computer. CleanSlate has no account or media upload.</p></article>
         <article className="feature"><span className="feature-number">02</span><h3>Made for your formats</h3><p>Clean common photos and videos, including HEIC, SVG, and supported camera RAW files.</p></article>
         <article className="feature"><span className="feature-number">03</span><h3>You choose the result</h3><p>Save cleaned copies beside the originals or replace the files you selected.</p></article>
       </div>
@@ -78,11 +78,11 @@ function HomePage() {
 
     <section className="steps-section" id="how-it-works" aria-labelledby="steps-title">
       <div className="shell steps-layout"><div className="steps-intro"><span className="section-kicker">HOW IT WORKS</span><h2 id="steps-title">From file to ready to share.</h2><p>One small habit can make the next upload feel simpler.</p><a className="text-link" href="/download/">Get CleanSlate <ArrowIcon /></a></div>
-        <ol className="steps-list"><li><span>01</span><div><h3>Add your files</h3><p>Drop images and videos into the window or choose them from your Mac.</p></div></li><li><span>02</span><div><h3>Choose where they go</h3><p>Keep new cleaned copies or update the originals. You can remember your choice.</p></div></li><li><span>03</span><div><h3>Share with more confidence</h3><p>CleanSlate shows what it processed and flags files it could not clean.</p></div></li></ol>
+        <ol className="steps-list"><li><span>01</span><div><h3>Add your files</h3><p>Drop images and videos into the window or choose them from your computer.</p></div></li><li><span>02</span><div><h3>Choose where they go</h3><p>Keep new cleaned copies or update the originals. You can remember your choice.</p></div></li><li><span>03</span><div><h3>Share with more confidence</h3><p>CleanSlate shows what it processed and flags files it could not clean.</p></div></li></ol>
       </div>
     </section>
 
-    <section className="final-cta shell"><div><span className="section-kicker">READY WHEN YOU ARE</span><h2>Give your files a clean slate.</h2><p>A small, focused macOS app for the media you share.</p></div><a className="button button-primary" href="/download/">Download CleanSlate <ArrowIcon /></a></section>
+    <section className="final-cta shell"><div><span className="section-kicker">READY WHEN YOU ARE</span><h2>Give your files a clean slate.</h2><p>A small, focused desktop app for the media you share.</p></div><a className="button button-primary" href="/download/">Download CleanSlate <ArrowIcon /></a></section>
   </main>;
 }
 
@@ -90,15 +90,16 @@ function dateLabel(value: string) {
   return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(new Date(value));
 }
 
-function DownloadCard({ release, architecture }: { release: Release; architecture: 'arm64' | 'x64' }) {
-  const appleSilicon = architecture === 'arm64';
-  const dmg = getAsset(release, architecture);
-  const checksum = getChecksum(release, architecture);
+function DownloadCard({ release, target }: { release: Release; target: DownloadTarget }) {
+  const windows = target === 'win-x64';
+  const appleSilicon = target === 'mac-arm64';
+  const installer = getAsset(release, target);
+  const checksum = getChecksum(release, target);
   return <article className="download-card">
-    <span className="chip">{appleSilicon ? 'APPLE SILICON' : 'INTEL'}</span>
-    <div className="download-card-top"><h2>{appleSilicon ? 'M series Macs' : 'Intel Macs'}</h2><p>{appleSilicon ? 'For Macs with an Apple M1 chip or newer.' : 'For Macs with an Intel processor.'}</p></div>
-    <a className="button button-primary" href={dmg?.url ?? release.url} target="_blank" rel="noopener noreferrer">{dmg ? 'Download DMG' : 'View release'} <ArrowIcon /></a>
-    <div className="download-card-meta"><span>{dmg?.name ?? `Version ${release.version}`}</span>{checksum && <a href={checksum.url} target="_blank" rel="noopener noreferrer">SHA-256 checksum ↗</a>}</div>
+    <span className="chip">{windows ? 'WINDOWS' : appleSilicon ? 'APPLE SILICON' : 'INTEL MAC'}</span>
+    <div className="download-card-top"><h2>{windows ? 'Windows PCs' : appleSilicon ? 'M series Macs' : 'Intel Macs'}</h2><p>{windows ? 'For 64-bit Windows 10 or newer.' : appleSilicon ? 'For Macs with an Apple M1 chip or newer.' : 'For Macs with an Intel processor.'}</p></div>
+    <a className="button button-primary" href={installer?.url ?? release.url} target="_blank" rel="noopener noreferrer">{installer ? windows ? 'Download EXE' : 'Download DMG' : 'View release'} <ArrowIcon /></a>
+    <div className="download-card-meta"><span>{installer?.name ?? `Version ${release.version}`}</span>{checksum && <a href={checksum.url} target="_blank" rel="noopener noreferrer">SHA-256 checksum ↗</a>}</div>
   </article>;
 }
 
@@ -110,14 +111,17 @@ function ReleaseNotes({ release }: { release: Release }) {
 
 function DownloadPage({ releases }: { releases: Release[] }) {
   const latest = releases[0];
+  const windowsAvailable = latest && !!getAsset(latest, 'win-x64');
   return <main>
-    <section className="download-hero"><div className="shell"><span className="eyebrow"><span className="eyebrow-dot" />CleanSlate for macOS</span><h1>Download CleanSlate.</h1><p>Choose the version made for your Mac, then clean files locally before you share them.</p>{latest && <div className="release-stamp"><span className="stamp-dot" />Latest release <strong>v{latest.version}</strong><span className="stamp-divider" />{dateLabel(latest.publishedAt)}</div>}</div></section>
+    <section className="download-hero"><div className="shell"><span className="eyebrow"><span className="eyebrow-dot" />CleanSlate for {windowsAvailable ? 'macOS and Windows' : 'macOS'}</span><h1>Download CleanSlate.</h1><p>Choose the installer for your computer, then clean files locally before you share them.</p>{latest && <div className="release-stamp"><span className="stamp-dot" />Latest release <strong>v{latest.version}</strong><span className="stamp-divider" />{dateLabel(latest.publishedAt)}</div>}</div></section>
 
-    {latest && <section className="shell download-grid" aria-label="Download the latest version"><DownloadCard release={latest} architecture="arm64" /><DownloadCard release={latest} architecture="x64" /></section>}
+    {latest && <section className={`shell download-grid${windowsAvailable ? ' download-grid--three' : ''}`} aria-label="Download the latest version"><DownloadCard release={latest} target="mac-arm64" /><DownloadCard release={latest} target="mac-x64" />{windowsAvailable && <DownloadCard release={latest} target="win-x64" />}</section>}
 
     <section className="shell install-section" aria-labelledby="install-title"><div className="section-heading"><span className="section-kicker">INSTALLATION</span><h2 id="install-title">On your Mac in three steps.</h2></div><ol className="install-steps"><li><span>1</span><p>Download the DMG that matches your Mac.</p></li><li><span>2</span><p>Open it and drag CleanSlate into Applications.</p></li><li><span>3</span><p>Open CleanSlate and add the files you want to clean.</p></li></ol><div className="install-note"><div><h3>About the macOS security prompt</h3><p>CleanSlate is currently unsigned and not notarized, so macOS may block it the first time you open it. If you trust your download, use <strong>System Settings → Privacy & Security → Open Anyway</strong>.</p><p>If macOS says the app is damaged, verify the downloaded DMG against its checksum first. The <a href={`${repositoryUrl}#if-macos-says-cleanslate-is-damaged`} target="_blank" rel="noopener noreferrer">README has the local test steps</a>.</p></div><a href="https://support.apple.com/en-us/102445" target="_blank" rel="noopener noreferrer">Apple’s guidance ↗</a></div></section>
 
-    <section className="shell versions-section" id="versions" aria-labelledby="versions-title"><div className="versions-heading"><div><span className="section-kicker">RELEASE HISTORY</span><h2 id="versions-title">Versions & changelogs</h2><p>Browse what changed and download an earlier build when you need one.</p></div><a className="text-link" href={releasesUrl} target="_blank" rel="noopener noreferrer">All releases on GitHub <span aria-hidden="true">↗</span></a></div><div className="release-list">{releases.map((release, index) => <details className="release-item" key={release.version} open={index === 0}><summary><span className="release-item-title">v{release.version}{index === 0 && <em>Latest</em>}</span><span className="release-item-date">{dateLabel(release.publishedAt)}</span><span className="release-chevron" aria-hidden="true">⌄</span></summary><div className="release-content"><ReleaseNotes release={release} /><div className="release-actions"><a href={getAsset(release, 'arm64')?.url ?? release.url} target="_blank" rel="noopener noreferrer">Apple silicon DMG ↗</a><a href={getAsset(release, 'x64')?.url ?? release.url} target="_blank" rel="noopener noreferrer">Intel DMG ↗</a><a href={release.url} target="_blank" rel="noopener noreferrer">GitHub release ↗</a></div></div></details>)}</div><p className="release-fallback">Release details come from <a href={releasesUrl} target="_blank" rel="noopener noreferrer">GitHub Releases</a>. If a newer version is missing here, check GitHub directly.</p></section>
+    {windowsAvailable && <section className="shell install-section install-section--windows" aria-labelledby="windows-install-title"><div className="section-heading"><span className="section-kicker">WINDOWS INSTALLATION</span><h2 id="windows-install-title">On your PC in three steps.</h2></div><ol className="install-steps"><li><span>1</span><p>Download the Windows x64 installer and its checksum.</p></li><li><span>2</span><p>Compare the installer hash using <code>Get-FileHash</code>, then run it.</p></li><li><span>3</span><p>Open CleanSlate and add the files you want to clean.</p></li></ol><div className="install-note"><div><h3>About the Windows security prompt</h3><p>The Windows installer is unsigned, so SmartScreen may show an unknown publisher warning. Verify its SHA-256 checksum before running it, and continue only if you trust the download.</p></div></div></section>}
+
+    <section className="shell versions-section" id="versions" aria-labelledby="versions-title"><div className="versions-heading"><div><span className="section-kicker">RELEASE HISTORY</span><h2 id="versions-title">Versions & changelogs</h2><p>Browse what changed and download an earlier build when you need one.</p></div><a className="text-link" href={releasesUrl} target="_blank" rel="noopener noreferrer">All releases on GitHub <span aria-hidden="true">↗</span></a></div><div className="release-list">{releases.map((release, index) => <details className="release-item" key={release.version} open={index === 0}><summary><span className="release-item-title">v{release.version}{index === 0 && <em>Latest</em>}</span><span className="release-item-date">{dateLabel(release.publishedAt)}</span><span className="release-chevron" aria-hidden="true">⌄</span></summary><div className="release-content"><ReleaseNotes release={release} /><div className="release-actions"><a href={getAsset(release, 'mac-arm64')?.url ?? release.url} target="_blank" rel="noopener noreferrer">Apple silicon DMG ↗</a><a href={getAsset(release, 'mac-x64')?.url ?? release.url} target="_blank" rel="noopener noreferrer">Intel DMG ↗</a>{getAsset(release, 'win-x64') && <a href={getAsset(release, 'win-x64')!.url} target="_blank" rel="noopener noreferrer">Windows x64 EXE ↗</a>}<a href={release.url} target="_blank" rel="noopener noreferrer">GitHub release ↗</a></div></div></details>)}</div><p className="release-fallback">Release details come from <a href={releasesUrl} target="_blank" rel="noopener noreferrer">GitHub Releases</a>. If a newer version is missing here, check GitHub directly.</p></section>
   </main>;
 }
 

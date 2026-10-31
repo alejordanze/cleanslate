@@ -9,13 +9,13 @@ const pages = [
     pathname: '/',
     file: 'index.html',
     title: 'CleanSlate — Share files, keep the details private',
-    description: 'CleanSlate is a simple macOS app that removes embedded metadata from images and videos locally before you share them.'
+    description: 'CleanSlate is a desktop app that removes embedded metadata from images and videos locally before you share them.'
   },
   {
     pathname: '/download/',
     file: 'download/index.html',
-    title: 'Download CleanSlate for macOS — Versions and changelogs',
-    description: 'Download CleanSlate for Apple silicon or Intel Macs. Browse past versions, changelogs, and installation steps.'
+    title: 'Download CleanSlate — Versions and changelogs',
+    description: 'Find CleanSlate desktop installers, release notes, and installation steps for macOS and Windows.'
   },
   {
     pathname: '/not-found/',

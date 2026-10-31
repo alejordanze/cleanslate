@@ -15,6 +15,8 @@ Run `npm run typecheck` and `npm run build` before shipping website changes. `np
 
 The Downloads page starts with a checked-in snapshot of published GitHub Releases, then requests the current list in the visitor's browser. A new desktop release therefore appears without rebuilding or deploying the website. If GitHub is unavailable, the snapshot stays visible. To refresh the pre-rendered snapshot, run `npm run sync:releases` and commit the updated `src/data/releases.json`.
 
+Windows download cards and installation steps appear only when the latest GitHub Release contains `CleanSlate-<version>-win-x64.exe`. Earlier releases show a Windows link only if that release has the installer. The release workflow publishes the installer and `SHA256SUMS-win-x64.txt` together.
+
 ## Deploy with Firebase Hosting
 
 Hosting is already enabled for project `cleanslate-74af5`, and this folder has `firebase.json` and `.firebaserc`. From the repository root, run:

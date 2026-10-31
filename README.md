@@ -1,6 +1,6 @@
 # CleanSlate
 
-CleanSlate removes embedded metadata from images and videos on your Mac. Add files, choose whether to keep the originals, and clean them locally before sharing. No account or upload is required.
+CleanSlate removes embedded metadata from images and videos on macOS and Windows. Add files, choose whether to keep the originals, and clean them locally before sharing. No account or upload is required.
 
 ## Download for macOS
 
@@ -38,6 +38,17 @@ gh attestation verify CleanSlate-0.1.3-arm64.dmg \
 
 This checks that the exact DMG was produced by this repository's GitHub Actions release workflow. It does not mean Apple signed or notarized the app. The workflow skips attestations for private test releases; GitHub Free only supports them for public repositories.
 
+## Download for Windows
+
+Choose the `win-x64` EXE on the [GitHub Releases page](https://github.com/alejordanze/cleanslate/releases) for a 64-bit Windows PC. Download `SHA256SUMS-win-x64.txt` beside it and compare the installer hash with the value in that file:
+
+```powershell
+Get-FileHash .\CleanSlate-0.1.5-win-x64.exe -Algorithm SHA256
+Get-Content .\SHA256SUMS-win-x64.txt
+```
+
+The installer is unsigned. Windows SmartScreen may show an unknown publisher warning. Verify the checksum and continue only if you trust the download. The checksum confirms that the file matches the release listing; it does not establish the publisher's identity.
+
 ## Use CleanSlate
 
 1. Drag images or videos into the window, or choose **Attach files**.
@@ -54,7 +65,7 @@ Real-file tests cover PNG, JPEG, HEIC, DNG, TIFF, SVG, MP4, and MOV. The picker 
 
 CleanSlate's processing flow uses local files and the bundled FFmpeg and ExifTool binaries, and works without an internet connection. The packaged macOS app checks GitHub Releases once per app session to see whether a newer version is available. This request does not upload media files. If GitHub cannot be reached, cleaning still works. The app has no account, cloud processing, analytics, telemetry, or automatic download or installation of updates. If you save files in a folder synced by iCloud, Dropbox, or another service, that service may sync them independently of CleanSlate.
 
-You can review the [source code](https://github.com/alejordanze/cleanslate), including the [file-processing code](src/main/metadata.ts) and [release workflow](.github/workflows/release.yml). Releases are built from a version tag in GitHub Actions. The workflow runs typechecks and tests, mounts and launches each macOS DMG, then publishes both architectures with checksums only after both builds pass. These checks make failures easier to catch; they are not an independent security audit. [Report a problem](https://github.com/alejordanze/cleanslate/issues) if a file retains sensitive metadata or behaves unexpectedly.
+You can review the [source code](https://github.com/alejordanze/cleanslate), including the [file-processing code](src/main/metadata.ts) and [release workflow](.github/workflows/release.yml). Releases are built from a version tag in GitHub Actions. The workflow runs typechecks and tests, smoke-tests the macOS DMGs and packaged Windows app, then publishes the installers with checksums after all builds pass. These checks make failures easier to catch; they are not an independent security audit. [Report a problem](https://github.com/alejordanze/cleanslate/issues) if a file retains sensitive metadata or behaves unexpectedly.
 
 ## Build and test locally
 
@@ -68,7 +79,8 @@ Use Node.js 22 or newer. Install dependencies with `npm ci`, then:
 | `npm run build` | Build the app into `out/` |
 | `npm run dist:mac -- --arm64` | Build an Apple silicon DMG in `release/` |
 | `npm run dist:mac -- --x64` | Build an Intel DMG in `release/` |
-| `scripts/smoke-dmg.sh release/CleanSlate-0.1.4-arm64.dmg` | Mount and smoke-test a locally built DMG |
+| `npm run dist:win` | Build a Windows x64 installer in `release/` on Windows |
+| `scripts/smoke-dmg.sh release/CleanSlate-0.1.5-arm64.dmg` | Mount and smoke-test a locally built DMG |
 
 `ffmpeg-static` downloads a platform-specific binary during dependency installation; ExifTool is also bundled. Install dependencies on the platform you are packaging for. The macOS app and development Dock icons are generated from `icons/clear-folder.svg` with `npm run icon:mac`.
 
@@ -83,10 +95,10 @@ The [CI workflow](.github/workflows/ci.yml) runs on pushes to `main` and pull re
 1. Add **Repository admins** to the tag ruleset's bypass list with **Always allow**. The PAT acts as its admin owner when pushing the tag.
 2. Create a fine-grained PAT under the admin account, limited to this repository with **Contents: Read and write**. Add it as an environment secret named `RELEASE_TAG_PAT` in a GitHub Actions environment named `release`. Restrict that environment to the `main` branch. The release job uses this PAT only to fetch and create the protected tag; its other GitHub API calls use `GITHUB_TOKEN`.
 
-To publish a macOS release:
+To publish a desktop release:
 
 1. Update the version in `package.json` and `package-lock.json`, for example with `npm version patch --no-git-tag-version`. The `--no-git-tag-version` option leaves tag creation to the workflow.
 2. Update the [release notes](.github/release-notes.md), then commit and push the changes to `main`. Wait for CI to pass.
-3. In GitHub Actions, open **Release macOS DMGs**, choose **Run workflow** on `main`, and run it.
+3. In GitHub Actions, open **Release desktop installers**, choose **Run workflow** on `main`, and run it.
 
-The [release workflow](.github/workflows/release.yml) reads the package version, creates its matching `v` tag, builds and checks both unsigned DMGs, and creates the GitHub Release after both builds pass. If a build fails after tagging, use **Re-run all jobs** on that workflow run to retry the same commit and tag. Only the repository owner can start or rerun this workflow. Releases start from the manual action because a PAT-created tag would otherwise trigger a second release run. No separate release branch or manual GitHub Release is needed.
+The [release workflow](.github/workflows/release.yml) reads the package version, creates its matching `v` tag, builds and checks two unsigned macOS DMGs and a Windows x64 installer, and creates the GitHub Release after all builds pass. Each installer has a SHA-256 checksum; public builds also have provenance attestations. If a build fails after tagging, use **Re-run all jobs** on that workflow run to retry the same commit and tag. Only the repository owner can start or rerun this workflow. Releases start from the manual action because a PAT-created tag would otherwise trigger a second release run. No separate release branch or manual GitHub Release is needed.
