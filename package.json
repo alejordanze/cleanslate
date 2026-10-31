@@ -1,6 +1,6 @@
 {
   "name": "CleanSlate",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "description": "A private desktop app that removes metadata from images and videos locally.",
   "type": "module",
@@ -16,6 +16,7 @@
     "dist": "npm run build && electron-builder",
     "dist:dir": "npm run build && electron-builder --dir",
     "dist:mac": "npm run build && electron-builder --mac dmg --publish never",
+    "dist:win": "npm run build && electron-builder --win nsis --x64 --publish never",
     "icon:mac": "electron scripts/build-mac-icon.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -71,7 +72,9 @@
       "icon": "icons/cleanslate.icns"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "icons/cleanslate.png",
+      "artifactName": "${productName}-${version}-win-x64.${ext}"
     },
     "linux": {
       "target": [

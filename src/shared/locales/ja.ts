@@ -1,7 +1,7 @@
 const messages = {
   systemDefault: 'システムの言語',
   language: '言語',
-  languageDescription: 'CleanSlate と macOS メニューの言語を選択します。',
+  languageDescription: 'CleanSlate とそのメニューの言語を選択します。',
   languageSaved: '言語を保存しました。',
   languageSaveFailed: '言語を保存できませんでした。もう一度お試しください。',
   menuFile: 'ファイル',

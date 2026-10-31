@@ -1,4 +1,4 @@
-name: Release macOS DMGs
+name: Release desktop installers
 
 on:
   workflow_dispatch:
@@ -135,8 +135,56 @@ jobs:
             release/SHA256SUMS-${{ matrix.arch }}.txt
           if-no-files-found: error
 
+  build-windows:
+    needs: prepare
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Check release version
+        run: |
+          node -e 'const p = require("./package.json"); if (process.env.RELEASE_TAG !== `v${p.version}`) process.exit(1)'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Build unsigned Windows installer
+        run: npm run dist:win
+      - name: Smoke-test packaged Windows app
+        run: pwsh -NoProfile -File scripts/smoke-windows.ps1
+      - name: Create checksum
+        run: |
+          $installer = @(Get-ChildItem release -Filter 'CleanSlate-*-win-x64.exe')
+          if ($installer.Count -ne 1) { throw 'Expected one Windows installer.' }
+          $hash = (Get-FileHash $installer[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer[0].Name)" | Set-Content -Encoding ascii release/SHA256SUMS-win-x64.txt
+      - name: Attest Windows build provenance
+        if: ${{ github.event.repository.visibility == 'public' }}
+        uses: actions/attest@v4
+        with:
+          subject-path: release/CleanSlate-*-win-x64.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-win-x64
+          path: |
+            release/CleanSlate-*-win-x64.exe
+            release/SHA256SUMS-win-x64.txt
+          if-no-files-found: error
+
   publish:
-    needs: [prepare, build]
+    needs: [prepare, build, build-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -150,20 +198,21 @@ jobs:
           ref: ${{ needs.prepare.outputs.tag }}
       - uses: actions/download-artifact@v4
         with:
-          pattern: dmg-*
           path: dist
           merge-multiple: true
-      - name: Verify both downloads
+      - name: Verify all downloads
         run: |
           cd dist
           test "$(find . -maxdepth 1 -name '*.dmg' | wc -l)" -eq 2
+          test "$(find . -maxdepth 1 -name '*-win-x64.exe' | wc -l)" -eq 1
           sha256sum -c SHA256SUMS-arm64.txt
           sha256sum -c SHA256SUMS-x64.txt
-      - name: Verify DMG build provenance
+          sha256sum -c SHA256SUMS-win-x64.txt
+      - name: Verify installer build provenance
         if: ${{ github.event.repository.visibility == 'public' }}
         run: |
-          for dmg in dist/*.dmg; do
-            gh attestation verify "$dmg" \
+          for installer in dist/*.dmg dist/*-win-x64.exe; do
+            gh attestation verify "$installer" \
               --repo "$GITHUB_REPOSITORY" \
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
           done

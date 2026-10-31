@@ -1,7 +1,7 @@
 const messages = {
   systemDefault: 'System default',
   language: 'Language',
-  languageDescription: 'Choose the language for CleanSlate and the macOS menus.',
+  languageDescription: 'Choose the language for CleanSlate and its menus.',
   languageSaved: 'Language saved.',
   languageSaveFailed: 'Could not save the language. Please try again.',
   menuFile: 'File',

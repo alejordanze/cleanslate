@@ -1,7 +1,7 @@
 const messages = {
   systemDefault: '跟随系统',
   language: '语言',
-  languageDescription: '选择 CleanSlate 和 macOS 菜单使用的语言。',
+  languageDescription: '选择 CleanSlate 及其菜单使用的语言。',
   languageSaved: '语言已保存。',
   languageSaveFailed: '无法保存语言。请重试。',
   menuFile: '文件',
