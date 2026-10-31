@@ -3,6 +3,7 @@
 import type { FfmpegCheckResult } from '../../shared/ffmpeg';
 import type { MediaFile } from '../../shared/media';
 import type { AvailableUpdate } from '../../shared/update';
+import type { LanguageChoice, LanguageSettings } from '../../shared/i18n';
 import type {
   MetadataProcessRequest,
   MetadataProcessResponse,
@@ -16,6 +17,10 @@ declare global {
       inspectFfmpeg: () => Promise<FfmpegCheckResult>;
       getOutputPreference: () => Promise<MetadataSaveMode | null>;
       saveOutputPreference: (mode: MetadataSaveMode | null) => Promise<void>;
+      getLanguageSettings: () => Promise<LanguageSettings>;
+      saveLanguageChoice: (choice: LanguageChoice) => Promise<LanguageSettings>;
+      onLanguageChanged: (callback: (settings: LanguageSettings) => void) => () => void;
+      onOpenPreferences: (callback: () => void) => () => void;
       checkForUpdates: () => Promise<AvailableUpdate | null>;
       markUpdateNoticeShown: () => Promise<void>;
       openLatestRelease: () => Promise<void>;

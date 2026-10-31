@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import { exiftoolPath } from 'exiftool-vendored';
 
 import type { MetadataField, MetadataSnapshot } from '../shared/metadata';
+import { t, type Language } from '../shared/i18n';
 
 const execFileAsync = promisify(execFile);
 const excludedGroups = new Set(['ExifTool', 'System', 'Composite']);
@@ -20,14 +21,14 @@ function fieldLabel(tag: string): string {
     .replace(/\bId\b/g, 'ID');
 }
 
-function fieldValue(value: unknown): string {
-  if (Array.isArray(value)) return value.map(fieldValue).join(', ');
-  if (value === null || value === '') return '(empty)';
+function fieldValue(value: unknown, language: Language): string {
+  if (Array.isArray(value)) return value.map((item) => fieldValue(item, language)).join(', ');
+  if (value === null || value === '') return t(language, 'emptyValue');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 }
 
-function fieldsFromExiftool(data: Record<string, unknown>): MetadataField[] {
+function fieldsFromExiftool(data: Record<string, unknown>, language: Language): MetadataField[] {
   return Object.entries(data).flatMap(([key, value]) => {
     if (key === 'SourceFile' || key === 'Error' || key === 'Warning') return [];
     const separator = key.indexOf(':');
@@ -38,13 +39,14 @@ function fieldsFromExiftool(data: Record<string, unknown>): MetadataField[] {
     const tag = location.replace(/^Copy\d+:/, '');
     if (excludedGroups.has(group) || (group === 'File' && excludedFileTags.has(tag))) return [];
 
-    return [{ key, group, label: `${fieldLabel(tag)}${copy ? ` (copy ${copy[1]})` : ''}`, value: fieldValue(value) }];
+    const label = fieldLabel(tag);
+    return [{ key, group, label: copy ? t(language, 'copyLabel', { label, count: copy[1] }) : label, value: fieldValue(value, language) }];
   }).sort((a, b) => a.group.localeCompare(b.group) || a.label.localeCompare(b.label));
 }
 
 /** Read local media metadata without exposing filesystem-only fields to the UI. */
-export async function inspectMetadata(filePath: string): Promise<MetadataSnapshot> {
-  if (!filePath) return { fields: [], error: 'This file has no readable local path.' };
+export async function inspectMetadata(filePath: string, language: Language = 'en'): Promise<MetadataSnapshot> {
+  if (!filePath) return { fields: [], error: t(language, 'noReadablePath') };
 
   try {
     const binary = await exiftoolPath();
@@ -56,8 +58,8 @@ export async function inspectMetadata(filePath: string): Promise<MetadataSnapsho
     const first = Array.isArray(data) ? data[0] : null;
     if (!first || typeof first !== 'object' || 'Error' in first) throw new Error('ExifTool could not inspect the file.');
 
-    return { fields: fieldsFromExiftool(first as Record<string, unknown>), error: null };
+    return { fields: fieldsFromExiftool(first as Record<string, unknown>, language), error: null };
   } catch {
-    return { fields: [], error: 'Could not read metadata from this file.' };
+    return { fields: [], error: t(language, 'metadataReadFailed') };
   }
 }

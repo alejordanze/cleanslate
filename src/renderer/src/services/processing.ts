@@ -6,6 +6,7 @@ import type {
 } from '../../../shared/metadata';
 import { getMetadataBridge } from './bridge';
 import type { Notice } from '../types';
+import { plural, t, type Language } from '../../../shared/i18n';
 
 export function removeMetadata(files: MediaFile[], mode: MetadataSaveMode): Promise<MetadataProcessResponse> {
   return getMetadataBridge().removeMetadata({
@@ -26,23 +27,23 @@ export function updateFileSizes(
   });
 }
 
-export function processingNotice(result: MetadataProcessResponse): Notice {
+export function processingNotice(result: MetadataProcessResponse, language: Language = 'en'): Notice {
   if (result.failed === 0) {
-    const count = `${result.succeeded} file${result.succeeded === 1 ? '' : 's'}`;
+    const count = plural(language, 'fileCountOne', 'fileCountOther', result.succeeded);
     return {
       tone: 'success',
       text: result.mode === 'new'
-        ? `Metadata removed from ${count}. Cleaned copies were saved beside the originals.`
-        : `Metadata removed from ${count}. The original files were updated.`,
+        ? t(language, 'cleanedCopiesSuccess', { count })
+        : t(language, 'originalsSuccess', { count }),
     };
   }
 
   const firstError = result.results.find((fileResult) => !fileResult.ok)?.error;
   const summary = result.succeeded > 0
-    ? `Cleaned ${result.succeeded} file${result.succeeded === 1 ? '' : 's'}. `
+    ? t(language, 'cleanedCount', { count: plural(language, 'fileCountOne', 'fileCountOther', result.succeeded) })
     : '';
   const detail = result.failed === 1 && firstError
     ? firstError
-    : `Could not process ${result.failed} files. Check that they open normally and try again.`;
+    : t(language, 'couldNotProcessCount', { count: result.failed });
   return { tone: 'warning', text: `${summary}${detail}` };
 }

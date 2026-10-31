@@ -14,23 +14,24 @@ import type {
   MetadataProcessResult,
   MetadataProcessTarget
 } from '../shared/metadata';
+import { t, type Language } from '../shared/i18n';
 
 type ProcessingStage = 'open' | 'process' | 'save';
 
-function friendlyError(error: unknown, target: MetadataProcessTarget, stage: ProcessingStage): string {
-  const kind = target.kind === 'image' ? 'image' : 'video';
+function friendlyError(error: unknown, target: MetadataProcessTarget, stage: ProcessingStage, language: Language): string {
+  const kind = t(language, target.kind);
   const code = (error as NodeJS.ErrnoException)?.code;
 
   if (stage === 'open' || code === 'ENOENT') {
-    return `Could not open this ${kind}. Check that the file still exists and is readable.`;
+    return t(language, 'couldNotOpenFile', { kind });
   }
   if (stage === 'save' || code === 'EACCES' || code === 'EPERM' || code === 'ENOSPC') {
-    return 'Could not save the cleaned file. Check folder permissions and free space.';
+    return t(language, 'couldNotSaveFile');
   }
   if (extname(target.path).toLowerCase() === '.svg') {
-    return 'Could not process this SVG image. Check that it is a valid SVG file.';
+    return t(language, 'invalidSvg');
   }
-  return `Could not process this ${kind}. The file may be damaged or unsupported.`;
+  return t(language, 'couldNotProcessFile', { kind });
 }
 
 function cleanedPath(target: MetadataProcessTarget): string {
@@ -111,13 +112,13 @@ async function replaceFile(sourcePath: string, destinationPath: string): Promise
   await rename(sourcePath, destinationPath);
 }
 
-async function confirmOverwrite(owner: BrowserWindow | null, outputPath: string): Promise<boolean> {
+async function confirmOverwrite(owner: BrowserWindow | null, outputPath: string, language: Language): Promise<boolean> {
   const options: Electron.MessageBoxOptions = {
     type: 'warning',
-    title: 'Cleaned file already exists',
-    message: `${basename(outputPath)} already exists.`,
-    detail: 'Do you want to replace the existing cleaned file?',
-    buttons: ['Keep existing', 'Replace'],
+    title: t(language, 'existingFileTitle'),
+    message: t(language, 'existingFileMessage', { name: basename(outputPath) }),
+    detail: t(language, 'existingFileDetail'),
+    buttons: [t(language, 'keepExisting'), t(language, 'replace')],
     defaultId: 0,
     cancelId: 0,
     noLink: true
@@ -132,7 +133,8 @@ async function confirmOverwrite(owner: BrowserWindow | null, outputPath: string)
 async function processOne(
   target: MetadataProcessTarget,
   mode: MetadataProcessRequest['mode'],
-  owner: BrowserWindow | null
+  owner: BrowserWindow | null,
+  language: Language
 ): Promise<MetadataProcessResult> {
   let outputPath: string | null = mode === 'new' ? null : target.path;
   let tempPath: string | null = null;
@@ -152,19 +154,20 @@ async function processOne(
     outputPath = mode === 'new' ? cleanedPath(target) : target.path;
     stage = 'save';
 
-    if (mode === 'new' && (await fileExists(outputPath)) && !(await confirmOverwrite(owner, outputPath))) {
+    if (mode === 'new' && (await fileExists(outputPath)) && !(await confirmOverwrite(owner, outputPath, language))) {
       return {
         id: target.id,
         inputPath: target.path,
         outputPath: null,
         size: null,
         ok: false,
-        error: `Skipped ${basename(outputPath)}.`,
+        skipped: true,
+        error: t(language, 'skipFile', { name: basename(outputPath) }),
         metadata: null
       };
     }
 
-    const before = await inspectMetadata(target.path);
+    const before = await inspectMetadata(target.path, language);
     tempPath = temporaryPath(outputPath);
     stage = 'process';
     if (target.kind === 'image' && extname(target.path).toLowerCase() === '.svg') {
@@ -187,7 +190,7 @@ async function processOne(
     tempPath = null;
 
     const outputStats = await stat(outputPath);
-    const after = await inspectMetadata(outputPath);
+    const after = await inspectMetadata(outputPath, language);
 
     return {
       id: target.id,
@@ -205,7 +208,7 @@ async function processOne(
       outputPath,
       size: null,
       ok: false,
-      error: friendlyError(error, target, stage),
+      error: friendlyError(error, target, stage, language),
       metadata: null
     };
   } finally {
@@ -217,12 +220,13 @@ async function processOne(
 
 export async function removeMetadata(
   request: MetadataProcessRequest,
-  owner: BrowserWindow | null
+  owner: BrowserWindow | null,
+  language: Language = 'en'
 ): Promise<MetadataProcessResponse> {
   const results: MetadataProcessResult[] = [];
 
   for (const target of request.files) {
-    results.push(await processOne(target, request.mode, owner));
+    results.push(await processOne(target, request.mode, owner, language));
   }
 
   return {

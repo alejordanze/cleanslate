@@ -16,8 +16,10 @@ import { WindowBar } from "./components/WindowBar";
 import { loadOutputPreference, saveOutputPreference } from "./services/outputPreference";
 import { processingNotice, removeMetadata, updateFileSizes } from "./services/processing";
 import type { Notice } from "./types";
+import { useI18n } from "./i18n";
 
 function App() {
+  const { language, t } = useI18n();
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
@@ -50,7 +52,7 @@ function App() {
         if (active)
           setMessage({
             tone: "warning",
-            text: "Could not load your output setting. Choose one before cleaning.",
+            text: t('loadOutputError'),
           });
       } finally {
         if (active) setPreferenceLoading(false);
@@ -61,6 +63,13 @@ function App() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    setMessage(null);
+    setDialogError(null);
+  }, [language]);
+
+  useEffect(() => window.cleanslate?.onOpenPreferences(() => setView('settings')), []);
 
   useEffect(() => {
     const bridge = window.cleanslate;
@@ -104,7 +113,7 @@ function App() {
           setSavedMode(mode);
         } catch {
           setDialogError(
-            "Could not remember your choice. Try again or uncheck the box to continue.",
+            t('rememberOutputError'),
           );
           return;
         }
@@ -118,13 +127,13 @@ function App() {
       );
       setFileResults(resultById);
       setFiles((current) => updateFileSizes(current, resultById));
-      setMessage(processingNotice(result));
+      setMessage(processingNotice(result, language));
 
       setIsSaveDialogOpen(false);
     } catch {
       setMessage({
         tone: "warning",
-        text: "Could not remove metadata. Please try again.",
+        text: t('cleanFailed'),
       });
       setIsSaveDialogOpen(false);
     } finally {
@@ -177,7 +186,7 @@ function App() {
     } catch {
       setMessage({
         tone: "warning",
-        text: "Could not open GitHub Releases. Please try again.",
+        text: t('openReleaseError'),
       });
     }
   }
@@ -195,29 +204,29 @@ function App() {
           <div className="brand">
             <img className="brand-mark" src={cleanSlateMark} alt="" />
             <span className="brand-name">CleanSlate</span>
-            <span className="brand-tag">media privacy</span>
+            <span className="brand-tag">{t('brandTag')}</span>
           </div>
         </header>
 
         {view === "files" && availableUpdate && !updateDismissed && (
           <aside className="update-banner" role="status">
             <div className="update-banner__copy">
-              <strong>CleanSlate {availableUpdate.version} is available</strong>
-              <span>Get the latest version from GitHub Releases.</span>
+              <strong>{t('updateAvailable', { version: availableUpdate.version })}</strong>
+              <span>{t('updateDescription')}</span>
             </div>
             <button
               className="update-banner__link"
               type="button"
               onClick={() => void openUpdateRelease()}
             >
-              View release
+              {t('viewRelease')}
             </button>
             <button
               className="update-banner__dismiss"
               type="button"
               onClick={dismissUpdate}
-              aria-label="Dismiss update notice"
-              title="Dismiss"
+              aria-label={t('dismissUpdateNotice')}
+              title={t('dismiss')}
             >
               ×
             </button>

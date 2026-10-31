@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { MetadataSaveMode } from "../../../shared/metadata";
 import rightArrowIcon from "../../../../icons/right-arrow.svg";
+import { useI18n } from "../i18n";
 
 type OutputDialogProps = {
   error: string | null;
@@ -18,6 +19,7 @@ const OutputDialog = ({
   onCancel,
   onClean,
 }: OutputDialogProps) => {
+  const { t } = useI18n();
   const [saveMode, setSaveMode] = useState<MetadataSaveMode>("new");
   const [rememberChoice, setRememberChoice] = useState(false);
 
@@ -29,12 +31,9 @@ const OutputDialog = ({
         aria-modal="true"
         aria-labelledby="save-dialog-title"
       >
-        <h2 id="save-dialog-title">Where should the cleaned files go?</h2>
+        <h2 id="save-dialog-title">{t('outputTitle')}</h2>
         <p className="save-dialog-copy">
-          Choose whether CleanSlate should update the originals or make new
-          copies beside them. Most images are re-encoded; HEIC and camera RAW
-          files are cleaned with ExifTool. Video streams are copied without
-          re-encoding.
+          {t('outputDescription')}
         </p>
 
         <div className="save-options">
@@ -50,11 +49,8 @@ const OutputDialog = ({
               disabled={isProcessing}
             />
             <span>
-              <strong>Save new cleaned copies</strong>
-              <small>
-                Adds <code>_cleaned</code> to each filename and saves it beside
-                the original.
-              </small>
+              <strong>{t('saveNewCopies')}</strong>
+              <small>{t('copyOptionDescription')}</small>
             </span>
           </label>
 
@@ -70,10 +66,8 @@ const OutputDialog = ({
               disabled={isProcessing}
             />
             <span>
-              <strong>Replace the original files</strong>
-              <small>
-                Updates each attached file in place. This cannot be undone.
-              </small>
+              <strong>{t('replaceOriginals')}</strong>
+              <small>{t('replaceOptionDescription')}</small>
             </span>
           </label>
         </div>
@@ -85,7 +79,7 @@ const OutputDialog = ({
             onChange={(event) => setRememberChoice(event.target.checked)}
             disabled={isProcessing}
           />
-          Remember this choice for next time
+          {t('rememberChoice')}
         </label>
 
         {error && (
@@ -101,7 +95,7 @@ const OutputDialog = ({
             onClick={onCancel}
             disabled={isProcessing}
           >
-            Cancel
+            {t('cancel')}
           </button>
           <button
             className="button button--primary"
@@ -109,7 +103,7 @@ const OutputDialog = ({
             onClick={() => void onClean(saveMode, rememberChoice)}
             disabled={isProcessing}
           >
-            {isProcessing ? "Cleaning..." : "Clean files"}
+            {isProcessing ? t('cleaning') : t('cleanFiles')}
             <img className="button-arrow" src={rightArrowIcon} alt="" />
           </button>
         </div>

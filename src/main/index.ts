@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell, type IpcMainInvokeEvent } from 'electron';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { inspectBundledFfmpeg } from '../shared/ffmpeg';
 import { removeMetadata } from './metadata';
 import { inspectMetadata } from './metadataInspection';
+import { applicationMenuTemplate } from './appMenu';
+import { readLanguagePreference, writeLanguagePreference } from './languagePreference';
 import { inspectBundledExiftool } from '../shared/exiftool';
 import {
   createMediaFile,
@@ -17,6 +19,7 @@ import type { MetadataProcessRequest, MetadataSaveMode, MetadataSnapshot } from 
 import { readOutputPreference, writeOutputPreference } from './outputPreference';
 import { checkForUpdate, createUpdateSession } from './updateCheck';
 import type { AvailableUpdate } from '../shared/update';
+import { isLanguage, languages, preferredLanguage, t, type Language, type LanguageChoice, type LanguageSettings } from '../shared/i18n';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,6 +34,44 @@ const rendererUrl = app.isPackaged
   : process.env.ELECTRON_RENDERER_URL ?? process.env.VITE_DEV_SERVER_URL ?? '';
 let mainWindow: BrowserWindow | null = null;
 const updateSession = createUpdateSession(() => checkForUpdate(app.getVersion()));
+let languageChoice: LanguageChoice = 'system';
+let language: Language = 'en';
+
+function languageSettings(): LanguageSettings {
+  return { choice: languageChoice, language };
+}
+
+function openPreferences(): void {
+  const window = mainWindow ?? createWindow();
+  window.show();
+  window.focus();
+  if (window.webContents.isLoading()) {
+    window.webContents.once('did-finish-load', () => window.webContents.send('menu:preferences'));
+  } else {
+    window.webContents.send('menu:preferences');
+  }
+}
+
+function updateApplicationMenu(): void {
+  Menu.setApplicationMenu(Menu.buildFromTemplate(applicationMenuTemplate(
+    language,
+    languageChoice,
+    (choice) => { void setLanguageChoice(choice).catch((error) => console.error('Could not save language:', error)); },
+    openPreferences,
+    () => { void shell.openExternal('https://github.com/alejordanze/cleanslate#readme'); }
+  )));
+}
+
+async function setLanguageChoice(choice: LanguageChoice): Promise<LanguageSettings> {
+  if (choice !== 'system' && !isLanguage(choice)) throw new Error('Choose a supported language.');
+  await writeLanguagePreference(join(app.getPath('userData'), 'language.json'), choice);
+  languageChoice = choice;
+  language = choice === 'system' ? preferredLanguage(app.getPreferredSystemLanguages()) : choice;
+  updateApplicationMenu();
+  const settings = languageSettings();
+  mainWindow?.webContents.send('language:changed', settings);
+  return settings;
+}
 
 function assertAppSender(event: IpcMainInvokeEvent): void {
   if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) {
@@ -92,6 +133,16 @@ ipcMain.handle('preferences:save-output', async (event, mode: MetadataSaveMode |
   await writeOutputPreference(join(app.getPath('userData'), 'preferences.json'), mode);
 });
 
+ipcMain.handle('preferences:get-language', (event): LanguageSettings => {
+  assertAppSender(event);
+  return languageSettings();
+});
+
+ipcMain.handle('preferences:save-language', async (event, choice: LanguageChoice): Promise<LanguageSettings> => {
+  assertAppSender(event);
+  return setLanguageChoice(choice);
+});
+
 ipcMain.handle('updates:check', async (event): Promise<AvailableUpdate | null> => {
   assertAppSender(event);
   if (!app.isPackaged || process.platform !== 'darwin' || smokeUserData) return null;
@@ -141,23 +192,23 @@ ipcMain.handle('metadata:remove', async (event, request: MetadataProcessRequest)
     throw new Error('Add at least one image or video before removing metadata.');
   }
 
-  return removeMetadata(request, mainWindow);
+  return removeMetadata(request, mainWindow, language);
 });
 
 ipcMain.handle('metadata:inspect', async (event, filePath: string): Promise<MetadataSnapshot> => {
   assertAppSender(event);
-  return inspectMetadata(typeof filePath === 'string' ? filePath : '');
+  return inspectMetadata(typeof filePath === 'string' ? filePath : '', language);
 });
 
 ipcMain.handle('media:pick', async (event): Promise<MediaFile[]> => {
   assertAppSender(event);
   const options: Electron.OpenDialogOptions = {
-    title: 'Choose media to clean',
-    buttonLabel: 'Add media',
+    title: t(language, 'pickerTitle'),
+    buttonLabel: t(language, 'pickerButton'),
     properties: ['openFile', 'multiSelections'],
     filters: [
       {
-        name: 'Images and videos',
+        name: t(language, 'pickerFilter'),
         extensions: supportedMediaExtensions
       }
     ]
@@ -185,7 +236,16 @@ ipcMain.handle('media:pick', async (event): Promise<MediaFile[]> => {
   return files.filter((file): file is MediaFile => file !== null);
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  try {
+    languageChoice = smokeUserData ? 'en' : await readLanguagePreference(join(app.getPath('userData'), 'language.json'));
+  } catch (error) {
+    console.error('Could not load language preference:', error);
+    languageChoice = 'system';
+  }
+  language = languageChoice === 'system' ? preferredLanguage(app.getPreferredSystemLanguages()) : languageChoice;
+  updateApplicationMenu();
+
   if (process.platform === 'darwin' && !app.isPackaged) {
     app.dock?.setIcon(join(__dirname, '../../icons/cleanslate.png'));
   }
@@ -318,6 +378,9 @@ app.whenReady().then(() => {
           window.reload();
         });
         const savedChoiceSkipsDialog = await window.webContents.executeJavaScript(`(async () => {
+          for (let attempt = 0; attempt < 40 && !document.querySelector('button[aria-label="Open settings"]'); attempt += 1) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
           document.querySelector('button[aria-label="Open settings"]')?.click();
           for (let attempt = 0; attempt < 40; attempt += 1) {
             if (document.querySelector('input[name="preferred-mode"][value="new"]:checked')) break;
@@ -372,7 +435,7 @@ app.whenReady().then(() => {
               const button = document.querySelector('.remove-all-button');
               const label = button?.querySelector('span');
               return Boolean(button?.matches(':hover') && label &&
-                parseFloat(getComputedStyle(button).width) >= 118 &&
+                button.scrollWidth <= button.clientWidth + 1 &&
                 parseFloat(getComputedStyle(label).opacity) >= .95);
             })()`);
             if (removeAllRevealed) break;
@@ -387,6 +450,9 @@ app.whenReady().then(() => {
           window.reload();
         });
         const rememberedChoiceSaved = await window.webContents.executeJavaScript(`(async () => {
+          for (let attempt = 0; attempt < 40 && !document.querySelector('.file-board'); attempt += 1) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
           const board = document.querySelector('.file-board');
           if (!board) return false;
           const dataTransfer = new DataTransfer();
@@ -441,7 +507,75 @@ app.whenReady().then(() => {
           if (!(await waitUntil(() => closed))) return fail('close control did not work');
         }
 
-        console.log('Smoke test passed: simplified screen, rounded icon, remove-all control, custom title bar, settings, warning layout, arrow icon, saved and remembered output choices, preload bridge, content policy, FFmpeg, and ExifTool are ready.');
+        if (process.argv.includes('--smoke-i18n')) {
+          const selectedInSettings = await window.webContents.executeJavaScript(`(async () => {
+            document.querySelector('button[aria-label="Open settings"]')?.click();
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const select = document.querySelector('#language-choice');
+            if (!(select instanceof HTMLSelectElement)) return false;
+            select.value = 'fr';
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            for (let attempt = 0; attempt < 40; attempt += 1) {
+              if (document.documentElement.lang === 'fr' && select.value === 'fr') {
+                document.querySelector('button[aria-label="Retour aux fichiers"]')?.click();
+                return true;
+              }
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            return false;
+          })()`);
+          if (!selectedInSettings || Menu.getApplicationMenu()?.items[1]?.label !== t('fr', 'menuFile')) {
+            return fail('Settings language choice did not update the renderer and native menu');
+          }
+          for (const option of languages) {
+            const settings = await window.webContents.executeJavaScript(`window.cleanslate.saveLanguageChoice(${JSON.stringify(option)})`) as LanguageSettings;
+            if (settings.language !== option) return fail(`language bridge did not select ${option}`);
+            let rendererTranslated = false;
+            for (let attempt = 0; attempt < 40; attempt += 1) {
+              rendererTranslated = await window.webContents.executeJavaScript(`(() =>
+                document.documentElement.lang === ${JSON.stringify(option)} &&
+                document.querySelector('.page-heading h1')?.textContent?.includes(${JSON.stringify(t(option, 'homeHeadingLead'))})
+              )()`);
+              if (rendererTranslated) break;
+              await new Promise((resolve) => setTimeout(resolve, 50));
+            }
+            if (!rendererTranslated || Menu.getApplicationMenu()?.items[1]?.label !== t(option, 'menuFile')) {
+              return fail(`${option} did not reach both the renderer and native menu`);
+            }
+            const removeBounds = await window.webContents.executeJavaScript(`(() => {
+              const bounds = document.querySelector('.remove-all-button')?.getBoundingClientRect();
+              return bounds ? { x: bounds.right - 18, y: bounds.y + bounds.height / 2 } : null;
+            })()`);
+            if (!removeBounds) return fail('the remove-all button is missing');
+            window.webContents.sendInputEvent({ type: 'mouseMove', x: Math.round(removeBounds.x), y: Math.round(removeBounds.y) });
+            let labelFits = false;
+            for (let attempt = 0; attempt < 20; attempt += 1) {
+              labelFits = await window.webContents.executeJavaScript(`(() => {
+                const button = document.querySelector('.remove-all-button');
+                const label = button?.querySelector('span');
+                return Boolean(button?.matches(':hover') && label &&
+                  button.scrollWidth <= button.clientWidth + 1 &&
+                  parseFloat(getComputedStyle(label).opacity) >= .95);
+              })()`);
+              if (labelFits) break;
+              await new Promise((resolve) => setTimeout(resolve, 50));
+            }
+            if (!labelFits) return fail(`${option} remove-all label was clipped`);
+          }
+          await new Promise<void>((resolve) => {
+            window.webContents.once('did-finish-load', () => resolve());
+            window.reload();
+          });
+          const restored = await window.webContents.executeJavaScript('window.cleanslate.getLanguageSettings()') as LanguageSettings;
+          if (restored.language !== languages.at(-1)) return fail('language choice did not survive a renderer reload');
+          for (let attempt = 0; attempt < 40; attempt += 1) {
+            if (await window.webContents.executeJavaScript(`document.documentElement.lang === ${JSON.stringify(restored.language)}`)) break;
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+        }
+
+        console.log('Smoke test passed: simplified screen, rounded icon, remove-all control, custom title bar, settings, warning layout, arrow icon, saved and remembered output choices, preload bridge, content policy, FFmpeg, and ExifTool are ready.' +
+          (process.argv.includes('--smoke-i18n') ? ' Seven languages also update the renderer and native menus.' : ''));
         app.exit(0);
       } catch (error) {
         fail(error instanceof Error ? error.message : String(error));

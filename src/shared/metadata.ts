@@ -37,6 +37,7 @@ export interface MetadataProcessResult {
   outputPath: string | null;
   size: number | null;
   ok: boolean;
+  skipped?: boolean;
   error: string | null;
   metadata: MetadataComparison | null;
 }

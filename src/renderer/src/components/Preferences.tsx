@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { MetadataSaveMode } from "../../../shared/metadata";
 import { saveOutputPreference } from "../services/outputPreference";
 import type { Notice } from "../types";
+import { isLanguage, languageNames, languages } from "../../../shared/i18n";
+import { useI18n } from "../i18n";
 
 type PreferencesProps = {
   savedMode: MetadataSaveMode | null;
@@ -16,13 +18,20 @@ const Preferences = ({
   onSavedMode,
   onBack,
 }: PreferencesProps) => {
+  const { choice, language, changeLanguage, t } = useI18n();
   const [draftMode, setDraftMode] = useState<MetadataSaveMode | null>(savedMode);
   const [settingsNotice, setSettingsNotice] = useState<Notice | null>(null);
   const [isSavingPreference, setIsSavingPreference] = useState(false);
+  const [isSavingLanguage, setIsSavingLanguage] = useState(false);
+  const [languageNotice, setLanguageNotice] = useState<'saved' | 'failed' | null>(null);
 
   useEffect(() => {
     setDraftMode(savedMode);
   }, [savedMode]);
+
+  useEffect(() => {
+    setSettingsNotice(null);
+  }, [language]);
 
   async function saveOutputSetting() {
     setIsSavingPreference(true);
@@ -34,36 +43,49 @@ const Preferences = ({
         tone: "success",
         text:
           draftMode === null
-            ? "Saved. CleanSlate will ask where to save each time."
-            : "Saved. CleanSlate will use this option automatically.",
+            ? t('outputSavedAsk')
+            : t('outputSavedAutomatic'),
       });
     } catch {
       setSettingsNotice({
         tone: "warning",
-        text: "Could not save the output setting. Please try again.",
+        text: t('outputSaveFailed'),
       });
     } finally {
       setIsSavingPreference(false);
+    }
+  }
+
+  async function selectLanguage(value: string) {
+    if (value !== 'system' && !isLanguage(value)) return;
+    setIsSavingLanguage(true);
+    setLanguageNotice(null);
+    try {
+      await changeLanguage(value);
+      setLanguageNotice('saved');
+    } catch {
+      setLanguageNotice('failed');
+    } finally {
+      setIsSavingLanguage(false);
     }
   }
   return (
     <>
       <section className="page-heading">
         <h1 id="settings-title" className="settings-title">
-          Preferences
+          {t('preferencesTitle')}
         </h1>
         <span className="section-kicker">
-          Keep it <em>your way.</em>
+          {t('preferencesKickerLead')} <em>{t('preferencesKickerEm')}</em>
         </span>
       </section>
       <section className="settings-section" aria-labelledby="settings-title">
         <div className="settings-items">
           <div>
-            <span className="section-kicker">Default save option</span>
+            <span className="section-kicker">{t('defaultSaveOption')}</span>
           </div>
           <p className="settings-copy">
-            Save an output option to use it automatically whenever you clean
-            files.
+            {t('settingsCopy')}
           </p>
           <div className="save-options settings-options">
             <label
@@ -81,11 +103,8 @@ const Preferences = ({
                 disabled={preferenceLoading || isSavingPreference}
               />
               <span>
-                <strong>Save new cleaned copies</strong>
-                <small>
-                  Keep originals and save copies beside them with{" "}
-                  <code>_cleaned</code> in the filename.
-                </small>
+                <strong>{t('saveNewCopies')}</strong>
+                <small>{t('saveNewCopiesDescription')}</small>
               </span>
             </label>
             <label
@@ -103,8 +122,8 @@ const Preferences = ({
                 disabled={preferenceLoading || isSavingPreference}
               />
               <span>
-                <strong>Replace the original files</strong>
-                <small>Clean each file in place. This cannot be undone.</small>
+                <strong>{t('replaceOriginals')}</strong>
+                <small>{t('replaceOriginalsDescription')}</small>
               </span>
             </label>
             <label
@@ -122,12 +141,26 @@ const Preferences = ({
                 disabled={preferenceLoading || isSavingPreference}
               />
               <span>
-                <strong>Ask me each time</strong>
-                <small>
-                  Choose where to save each batch when you clean it.
-                </small>
+                <strong>{t('askEachTime')}</strong>
+                <small>{t('askEachTimeDescription')}</small>
               </span>
             </label>
+          </div>
+          <div className="language-setting">
+            <label htmlFor="language-choice" className="section-kicker">{t('language')}</label>
+            <p className="settings-copy">{t('languageDescription')}</p>
+            <select
+              id="language-choice"
+              value={choice}
+              disabled={isSavingLanguage}
+              onChange={(event) => void selectLanguage(event.target.value)}
+            >
+              <option value="system">{t('systemDefault')}</option>
+              {languages.map((option) => <option key={option} value={option}>{languageNames[option]}</option>)}
+            </select>
+            {languageNotice && <span className={`settings-notice settings-notice--${languageNotice === 'saved' ? 'success' : 'warning'}`} role="status">
+              {t(languageNotice === 'saved' ? 'languageSaved' : 'languageSaveFailed')}
+            </span>}
           </div>
         </div>
         <div className="settings-actions">
@@ -139,7 +172,7 @@ const Preferences = ({
               preferenceLoading || isSavingPreference || draftMode === savedMode
             }
           >
-            {isSavingPreference ? "Saving..." : "Save"}
+            {isSavingPreference ? t('saving') : t('save')}
           </button>
           <button
             className="button button--secondary"
@@ -147,7 +180,7 @@ const Preferences = ({
             onClick={onBack}
             disabled={preferenceLoading || isSavingPreference}
           >
-            Back
+            {t('back')}
           </button>
           {settingsNotice && (
             <span

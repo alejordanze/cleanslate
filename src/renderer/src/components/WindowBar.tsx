@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import gearIcon from '../../../../icons/gear.svg';
 import { getBridge } from '../services/bridge';
+import { useI18n } from '../i18n';
 
 type WindowBarProps = {
   view: 'files' | 'settings';
@@ -8,6 +9,7 @@ type WindowBarProps = {
 };
 
 export function WindowBar({ view, onSettingsToggle }: WindowBarProps) {
+  const { t } = useI18n();
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -28,14 +30,14 @@ export function WindowBar({ view, onSettingsToggle }: WindowBarProps) {
   }, []);
 
   return (
-    <header className="window-bar" aria-label="Window controls">
+    <header className="window-bar" aria-label={t('windowControls')}>
       <div className="window-controls">
         <button
           className="window-control window-control--close"
           type="button"
           onClick={() => getBridge().closeWindow()}
-          aria-label="Close window"
-          title="Close window"
+          aria-label={t('closeWindow')}
+          title={t('closeWindow')}
         >
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="m5 5 6 6m0-6-6 6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
@@ -45,8 +47,8 @@ export function WindowBar({ view, onSettingsToggle }: WindowBarProps) {
           className="window-control window-control--minimize"
           type="button"
           onClick={() => getBridge().minimizeWindow()}
-          aria-label="Minimize window"
-          title="Minimize window"
+          aria-label={t('minimizeWindow')}
+          title={t('minimizeWindow')}
         >
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M4.5 8h7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
@@ -56,8 +58,8 @@ export function WindowBar({ view, onSettingsToggle }: WindowBarProps) {
           className="window-control window-control--maximize"
           type="button"
           onClick={() => void getBridge().toggleMaximizeWindow().then(setIsMaximized)}
-          aria-label={isMaximized ? 'Restore window' : 'Maximize window'}
-          title={isMaximized ? 'Restore window' : 'Maximize window'}
+          aria-label={isMaximized ? t('restoreWindow') : t('maximizeWindow')}
+          title={isMaximized ? t('restoreWindow') : t('maximizeWindow')}
         >
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
             {isMaximized ? (
@@ -73,8 +75,8 @@ export function WindowBar({ view, onSettingsToggle }: WindowBarProps) {
         className={`settings-icon-button${view === 'settings' ? ' is-active' : ''}`}
         type="button"
         onClick={onSettingsToggle}
-        aria-label={view === 'settings' ? 'Back to files' : 'Open settings'}
-        title={view === 'settings' ? 'Back to files' : 'Settings'}
+        aria-label={view === 'settings' ? t('backToFiles') : t('openSettings')}
+        title={view === 'settings' ? t('backToFiles') : t('settings')}
         aria-pressed={view === 'settings'}
       >
         <img src={gearIcon} alt="" />

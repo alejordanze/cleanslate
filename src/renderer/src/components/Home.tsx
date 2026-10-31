@@ -7,6 +7,7 @@ import type { Notice } from "../types";
 import folderOpenIcon from "../../../../icons/open-folder.svg";
 import removeAllIcon from "../../../../icons/remove-all.svg";
 import rightArrowIcon from "../../../../icons/right-arrow.svg";
+import { useI18n } from "../i18n";
 
 type HomeProps = {
   files: MediaFile[];
@@ -36,6 +37,7 @@ const Home = ({
   onOpenMetadata,
   message,
 }: HomeProps) => {
+  const { t, plural } = useI18n();
   const [isDragging, setIsDragging] = useState(false);
   const [isPicking, setIsPicking] = useState(false);
 
@@ -50,7 +52,7 @@ const Home = ({
     if (!bridge) {
       onMessage({
         tone: "warning",
-        text: "The file bridge is unavailable. Restart the app and try again.",
+        text: t('fileBridgeUnavailable'),
       });
       return;
     }
@@ -78,7 +80,7 @@ const Home = ({
     if (mediaFiles.length !== droppedFiles.length) {
       onMessage({
         tone: "warning",
-        text: "Only image and video files can be added. Unsupported files were skipped.",
+        text: t('unsupportedFiles'),
       });
     }
 
@@ -94,7 +96,7 @@ const Home = ({
     } catch {
       onMessage({
         tone: "warning",
-        text: "Could not open the file picker. Please try again.",
+        text: t('filePickerFailed'),
       });
     } finally {
       setIsPicking(false);
@@ -111,10 +113,10 @@ const Home = ({
     <>
       <section className="page-heading">
         <h1>
-          Make your files <em>quietly private.</em>
+          {t('homeHeadingLead')} <em>{t('homeHeadingEm')}</em>
         </h1>
         <p>
-          Remove hidden metadata from photos and videos before you share them.
+          {t('homeSubtitle')}
         </p>
       </section>
 
@@ -122,18 +124,18 @@ const Home = ({
         <div className="section-heading">
           <h2>
             {files.length === 0
-              ? "Your files"
-              : `${files.length} file${files.length === 1 ? "" : "s"} ready`}
+              ? t('yourFiles')
+              : plural('filesReadyOne', 'filesReadyOther', files.length)}
           </h2>
           {files.length > 0 && (
             <button
               className="remove-all-button"
               type="button"
               onClick={onClearFiles}
-              aria-label="Remove all files from queue"
+              aria-label={t('removeAllAria')}
             >
               <img src={removeAllIcon} alt="" />
-              <span>Remove all</span>
+              <span>{t('removeAll')}</span>
             </button>
           )}
         </div>
@@ -154,14 +156,14 @@ const Home = ({
                 <img className="drop-orbit__icon" src={folderOpenIcon} alt="" />
               </div>
               <strong>
-                {isDragging ? "Release to add files" : "Drop files here"}
+                {isDragging ? t('releaseToAdd') : t('dropFilesHere')}
               </strong>
-              <span>Images and videos, one or many at a time</span>
+              <span>{t('supportedMediaHint')}</span>
             </div>
           ) : (
             <div className="file-list">
               <span className="file-list-hint">
-                Drop more files anywhere in this queue
+                {t('dropMoreFiles')}
               </span>
               {files.map((file) => (
                 <FileRow
@@ -188,7 +190,7 @@ const Home = ({
             <span className="attach-mark" aria-hidden="true">
               +
             </span>
-            {isPicking ? "Opening..." : "Attach files"}
+            {isPicking ? t('opening') : t('attachFiles')}
           </button>
           {message ? (
             <span
@@ -221,15 +223,15 @@ const Home = ({
             </span>
           ) : (
             <div className="process-copy">
-              <span className="process-label">Ready when you are</span>
+              <span className="process-label">{t('readyWhenYouAre')}</span>
               <span className="process-note">
                 {files.length === 0
-                  ? "Add at least one image or video to begin."
+                  ? t('addFilePrompt')
                   : savedMode === "new"
-                    ? "Cleaned copies will be saved beside the originals. Change this in Settings."
+                    ? t('copiesSavedHint')
                     : savedMode === "replace"
-                      ? "Original files will be replaced. Change this in Settings."
-                      : "You’ll choose where to save the cleaned files before cleaning."}
+                      ? t('originalsReplacedHint')
+                      : t('chooseOutputHint')}
               </span>
             </div>
           )}
@@ -240,7 +242,7 @@ const Home = ({
           onClick={startCleaning}
           disabled={files.length === 0 || isProcessing || preferenceLoading}
         >
-          {isProcessing ? "Cleaning..." : "Remove metadata"}
+          {isProcessing ? t('cleaning') : t('removeMetadata')}
           <img className="button-arrow" src={rightArrowIcon} alt="" />
         </button>
       </footer>

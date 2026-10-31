@@ -155,7 +155,7 @@ export function mergeMediaFiles(current: MediaFile[], incoming: MediaFile[]): Me
   return uniqueIncoming.length > 0 ? [...current, ...uniqueIncoming] : current;
 }
 
-export function formatFileSize(bytes: number): string {
+export function formatFileSize(bytes: number, locale = 'en'): string {
   if (bytes === 0) {
     return '0 B';
   }
@@ -164,5 +164,6 @@ export function formatFileSize(bytes: number): string {
   const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const value = bytes / 1024 ** unitIndex;
 
-  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+  const digits = value >= 10 || unitIndex === 0 ? 0 : 1;
+  return `${new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value)} ${units[unitIndex]}`;
 }
