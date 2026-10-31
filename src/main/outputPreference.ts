@@ -1,20 +1,13 @@
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { rm } from 'node:fs/promises';
 
 import type { MetadataSaveMode } from '../shared/metadata';
+import { readPreferenceFile, writePreferenceFile } from './preferenceFile';
 
 export async function readOutputPreference(path: string): Promise<MetadataSaveMode | null> {
-  let contents: string;
-  try {
-    contents = await readFile(path, 'utf8');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    throw error;
-  }
-
-  const saved = JSON.parse(contents) as { outputMode?: unknown };
-  if (saved?.outputMode === 'new' || saved?.outputMode === 'replace') return saved.outputMode;
+  const saved = await readPreferenceFile(path);
+  if (saved === null) return null;
+  const mode = saved && typeof saved === 'object' && 'outputMode' in saved ? saved.outputMode : null;
+  if (mode === 'new' || mode === 'replace') return mode;
   throw new Error('The saved output setting is invalid.');
 }
 
@@ -25,12 +18,5 @@ export async function writeOutputPreference(path: string, mode: MetadataSaveMode
   }
   if (mode !== 'new' && mode !== 'replace') throw new Error('Choose a valid output setting.');
 
-  await mkdir(dirname(path), { recursive: true });
-  const temporaryPath = join(dirname(path), `.preferences-${randomUUID()}.json`);
-  try {
-    await writeFile(temporaryPath, JSON.stringify({ outputMode: mode }), { mode: 0o600 });
-    await rename(temporaryPath, path);
-  } finally {
-    await rm(temporaryPath, { force: true });
-  }
+  await writePreferenceFile(path, { outputMode: mode });
 }
